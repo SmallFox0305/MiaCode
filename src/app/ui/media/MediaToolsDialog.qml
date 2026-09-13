@@ -10,6 +10,7 @@ AppDialog {
     id: root
 
     required property var mediaTools
+    property bool documentAvailable: true
 
     title: qsTrId("media_tools.audio_video_processing")
     preferredWidth: 560
@@ -56,24 +57,28 @@ AppDialog {
 
         ToolRow {
             objectName: "mediaToolSampleRate"
+            enabled: root.documentAvailable
             label: qsTrId("qml.convert_sample_rate")
             description: qsTrId("qml.convert_the_sample_rate_of_track_mp3_to_44100_hz_and_automatical")
             onClicked: root.mediaTools.convertTrackTo44100Hz()
         }
         ToolRow {
             objectName: "mediaToolPrependTrack"
+            enabled: root.documentAvailable
             label: qsTrId("qml.prepend_blank_audio")
             description: qsTrId("qml.insert_blank_audio_of_the_specified_duration_at_the_beginning_of")
             onClicked: root.prependRequested(true)
         }
         ToolRow {
             objectName: "mediaToolPrependPv"
+            enabled: root.documentAvailable
             label: qsTrId("qml.prepend_black_screen")
             description: qsTrId("qml.insert_a_black_screen_of_the_specified_duration_at_the_beginning")
             onClicked: root.prependRequested(false)
         }
         ToolRow {
             objectName: "mediaToolCompressVideo"
+            enabled: root.documentAvailable
             label: qsTrId("media_tools.batch_pv_start")
             description: qsTrId("media_tools.compress_the_background_video_under")
             onClicked: root.mediaTools.compressBackgroundVideo()

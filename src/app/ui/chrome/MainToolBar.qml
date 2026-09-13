@@ -19,6 +19,8 @@ Rectangle {
 
     property bool sidebarActive: false
     property bool bottomActive: false
+    property bool saveEnabled: true
+    property bool bottomPanelEnabled: true
     property bool canUndo: false
     property bool canRedo: false
 
@@ -51,6 +53,7 @@ Rectangle {
         ToolBarButton {
             iconSource: Qt.resolvedUrl("icons/save.svg")
             tooltip: qsTrId("action.save")
+            enabled: root.saveEnabled
             onClicked: root.saveRequested()
         }
         ToolBarButton {
@@ -96,6 +99,7 @@ Rectangle {
         ToolBarButton {
             iconSource: Qt.resolvedUrl("icons/panel-bottom.svg")
             tooltip: qsTrId("qml.toggle_bottom_panel")
+            enabled: root.bottomPanelEnabled
             active: root.bottomActive
             onClicked: root.toggleBottomRequested()
         }

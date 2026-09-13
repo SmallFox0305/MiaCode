@@ -111,6 +111,7 @@ bool Session::eventFilter(QObject*, QEvent* event)
             && QGuiApplication::focusWindow() == rootWindow
             && keyEvent->key() == Qt::Key_Space
             && keyEvent->modifiers() == Qt::NoModifier
+            && rootWindow->property("playbackCommandsEnabled").toBool()
             && !rootWindowReservesPlainSpace(rootWindow)) {
             if (event->type() == QEvent::KeyPress
                 && !keyEvent->isAutoRepeat()

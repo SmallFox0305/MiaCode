@@ -30,6 +30,8 @@ Item {
     property var pendingActivationCompletion: null
     property var pendingActivationCancellation: null
 
+    signal openRequested()
+
     function undo() {
         if (sourceVisible)
             sourceEditor.undo()
@@ -461,11 +463,21 @@ Item {
 
     Label {
         anchors.centerIn: parent
-        visible: !root.viewState.hasActiveEditor
+        visible: root.documentSession.hasDocument && !root.viewState.hasActiveEditor
         text: qsTrId("qml.open_metadata_or_a_difficulty_from_the_sidebar")
         color: Theme.colors.text.secondary
         font.family: Theme.uiFont
         font.pixelSize: Theme.uiFontSize
+    }
+
+    WelcomePage {
+        anchors.fill: parent
+        visible: !root.documentSession.hasDocument
+        z: 10
+        documentSession: root.documentSession
+        onNewRequested: root.commands.newDocument()
+        onOpenRequested: root.openRequested()
+        onOpenRecentRequested: path => root.commands.openRecentDocument(path)
     }
 
     DesignerSlotsDialog {

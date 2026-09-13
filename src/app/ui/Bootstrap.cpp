@@ -11,6 +11,8 @@
 #include "chrome/NativeWindowTheme.h"
 #include "ui/preferences/LocaleService.h"
 #include "drop/ChartDropBridge.h"
+#include "document/DocumentModel.h"
+#include "layout/PageHost.h"
 #include "common/DebugLog.h"
 #include "common/OperationLog.h"
 #include "preview/quick_scene/PreviewQuickHudLayer.h"
@@ -89,6 +91,12 @@ bool Bootstrap::start(const QString& startupOpenTarget)
     applicationContext_ = std::make_unique<ApplicationContext>(*applicationServices_, this);
     QObject::connect(static_cast<PageHost*>(applicationContext_->pages()),
         &PageHost::coverWindowRequested, this, &Bootstrap::openCoverExportWindow);
+    auto* const document = static_cast<DocumentModel*>(applicationContext_->document());
+    QObject::connect(document, &DocumentModel::documentStateChanged, this, [this, document]() {
+        if (coverWindow_ && !document->hasDocument()) {
+            coverWindow_->close();
+        }
+    });
     QObject::connect(
         static_cast<miacode::ui::ShellLifecycle*>(applicationContext_->shell()),
         &miacode::ui::ShellLifecycle::rootCloseAccepted,

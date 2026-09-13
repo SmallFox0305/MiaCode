@@ -8,6 +8,7 @@ Item {
 
     required property var previewSession
     required property var preferences
+    property bool dataAvailable: true
     // True while the export page is up. The canvas menu hides there:
     // entering preview fullscreen on that page crashes the Intel iGPU D3D11
     // driver with hardware decode. Supplied by the caller, which knows the
@@ -40,6 +41,8 @@ Item {
     }
 
     readonly property real lowerBoundSeconds: {
+        if (!root.dataAvailable)
+            return 0
         const bound = root.previewSession && root.previewSession.lowerBoundSeconds !== undefined
                       ? root.previewSession.lowerBoundSeconds
                       : 0
@@ -47,9 +50,9 @@ Item {
     }
     property bool scrubActive: false
     property real activeScrubSecond: root.previewSession.positionSeconds
-    readonly property real displayedSeconds: root.scrubActive
-        ? root.activeScrubSecond
-        : root.previewSession.positionSeconds
+    readonly property real displayedSeconds: root.dataAvailable
+        ? (root.scrubActive ? root.activeScrubSecond : root.previewSession.positionSeconds)
+        : 0
 
     // Shorten "pos / dur" only when the control row would actually collide —
     // independent of NoteStatistics column switching.
@@ -70,7 +73,7 @@ Item {
         font.family: Theme.uiFont
         font.pixelSize: Theme.secondaryFontSize
         text: root.formatTime(root.displayedSeconds)
-              + " / " + root.formatTime(root.previewSession.durationSeconds)
+              + " / " + root.formatTime(root.dataAvailable ? root.previewSession.durationSeconds : 0)
     }
 
     AppSlider {
@@ -83,7 +86,7 @@ Item {
         anchors.topMargin: root.progressTopInset
         height: 24
         from: root.lowerBoundSeconds
-        to: root.previewSession.durationSeconds
+        to: root.dataAvailable ? root.previewSession.durationSeconds : 0
         live: true
         onPressedChanged: {
             if (pressed) {
@@ -147,7 +150,8 @@ Item {
             text: {
                 const pos = root.formatTime(root.displayedSeconds)
                 if (root.timeFitsFull)
-                    return pos + " / " + root.formatTime(root.previewSession.durationSeconds)
+                    return pos + " / " + root.formatTime(
+                        root.dataAvailable ? root.previewSession.durationSeconds : 0)
                 return pos
             }
             color: Theme.colors.text.secondary

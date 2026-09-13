@@ -8,6 +8,7 @@ ApplicationWindow {
 
     property bool sourceEditorFocused: false
     property bool sourceEditorOverlayHeld: false
+    readonly property bool playbackCommandsEnabled: mainView.chartEditorActive
     readonly property Item backdropSource: sceneContent
 
     required property var applicationContext
@@ -213,7 +214,8 @@ ApplicationWindow {
         previewSession: window.applicationContext.preview
         preferencesModel: window.applicationContext.preferencesModel
         sourceEditorFocused: window.sourceEditorFocused
-        chartCommandsEnabled: window.applicationContext.document.currentDifficultyId > 0
+        chartCommandsEnabled: mainView.chartEditorActive
+        playbackCommandsEnabled: window.playbackCommandsEnabled
         onChartTransformRequested: opId => mainView.applyChartTransform(opId)
     }
 

@@ -25,7 +25,19 @@ Item {
     readonly property var preferencesModel: applicationContext.preferencesModel
     readonly property var latency: applicationContext.latency
     readonly property var shortcutModel: applicationContext.shortcuts
-    readonly property string documentTitle: documentSession.documentTitle
+    readonly property string documentTitle: {
+        if (!documentSession.hasDocument)
+            return ""
+        const metadataTitle = documentSession.metadataTitle.trim()
+        const baseTitle = metadataTitle.length > 0
+            ? metadataTitle : documentSession.currentFileName
+        return state.difficultyEditorActive
+            ? baseTitle + " — " + documentSession.currentDifficultyLabel
+            : baseTitle
+    }
+    readonly property bool editorActive: state.hasActiveEditor && !pages.overlayActive
+    readonly property bool chartEditorActive: documentSession.hasDocument
+        && documentSession.currentDifficultyId > 0 && !pages.overlayActive
     readonly property real minimumWidth: splitView.minimumWorkspaceWidth
     readonly property real minimumHeight: titleBar.height + platformMenuLoader.height
         + mainToolBar.height + statusBar.height + splitView.minimumHeight
@@ -58,28 +70,51 @@ Item {
         onSelectAllRequested: root.selectAll()
         onFindRequested: splitView.showFindReplace()
         onSelectCurrentLineRequested: splitView.selectCurrentLine()
-        onMetadataRequested: state.openMetadataEditor()
+        onMetadataRequested: {
+            if (root.documentSession.hasDocument)
+                state.openMetadataEditor()
+        }
         onLatencyCalibrationRequested: {
+            if (!root.documentSession.hasDocument)
+                return
             root.pages.rememberEditorReturnTarget(state.activeEditorKey)
             root.pages.openLatencyPage()
         }
-        onMediaToolsRequested: root.pages.openMediaProcessingTools()
+        onMediaToolsRequested: {
+            if (root.documentSession.hasDocument)
+                root.pages.openMediaProcessingTools()
+        }
         onUnavailableFeatureRequested: featureName => root.showUnavailableFeature(featureName)
         onOpenRequested: openFileDialog.open()
         onSaveRequested: root.saveDocument()
-        onSaveWholeDocumentRequested: root.commands.saveWholeDocument()
-        onSaveAsRequested: saveFileDialog.open()
-        onChartTransformRequested: opId => root.applyChartTransform(opId)
-        onNormalizeChartRequested: root.pages.openNormalizeWholeChart()
+        onSaveWholeDocumentRequested: root.saveWholeDocument()
+        onSaveAsRequested: {
+            if (root.documentSession.hasDocument)
+                saveFileDialog.open()
+        }
+        onChartTransformRequested: opId => {
+            if (root.chartEditorActive)
+                root.applyChartTransform(opId)
+        }
+        onNormalizeChartRequested: {
+            if (root.chartEditorActive)
+                root.pages.openNormalizeWholeChart()
+        }
         onAboutRequested: aboutDialog.open()
         onPreferencesRequested: preferencesDialog.open()
         onNewDocumentRequested: root.commands.newDocument()
         onOpenRecentRequested: path => root.commands.openRecentDocument(path)
         onRestoreBackupRequested: path => root.commands.restoreBackupDocument(path)
-        onCloseDocumentRequested: root.commands.closeDocument()
+        onCloseDocumentRequested: {
+            if (root.documentSession.hasDocument)
+                root.commands.closeDocument()
+        }
         onAudioSettingsRequested: audioSettingsDialog.open()
         onPreviewSettingsRequested: previewSettingsDialog.open()
-        onPreviewRateStepRequested: direction => root.previewSession.adjustRate(direction)
+        onPreviewRateStepRequested: direction => {
+            if (root.chartEditorActive)
+                root.previewSession.adjustRate(direction)
+        }
     }
 
     function toggleSidebar() {
@@ -108,6 +143,8 @@ Item {
     }
 
     function applyChartTransform(opId) {
+        if (!root.chartEditorActive)
+            return false
         return splitView.applyChartTransform(opId)
     }
 
@@ -117,11 +154,23 @@ Item {
     }
 
     function saveDocument() {
+        if (!root.editorActive)
+            return
         if (root.documentSession.currentFilePath.length === 0) {
             saveFileDialog.open()
             return
         }
         root.commands.saveDocument()
+    }
+
+    function saveWholeDocument() {
+        if (!root.documentSession.hasDocument)
+            return
+        if (root.documentSession.currentFilePath.length === 0) {
+            saveFileDialog.open()
+            return
+        }
+        root.commands.saveWholeDocument()
     }
 
     // The unsaved-changes question is not asked here any more. It is asked by
@@ -158,10 +207,16 @@ Item {
             menuCommands: menuCommands
             shortcuts: root.applicationContext.shortcuts
             documentSession: root.documentSession
+            saveEnabled: root.editorActive
+            wholeDocumentSaveEnabled: root.documentSession.hasDocument
+            documentAvailable: root.documentSession.hasDocument
+            editorCommandsEnabled: root.editorActive
+            chartCommandsEnabled: root.chartEditorActive
+            toolCommandsEnabled: root.documentSession.hasDocument
             leadingInset: root.applicationContext.windowChrome
                 ? root.applicationContext.windowChrome.titleBarLeadingInset
                 : 0
-            documentTitle: root.documentSession.documentTitle
+            documentTitle: root.documentTitle
             normalizationEnabled: root.pages.activePageId !== "export"
         }
 
@@ -178,6 +233,12 @@ Item {
                 shortcuts: root.applicationContext.shortcuts
                 documentSession: root.documentSession
                 commandsEnabled: true
+                saveEnabled: root.editorActive
+                wholeDocumentSaveEnabled: root.documentSession.hasDocument
+                documentAvailable: root.documentSession.hasDocument
+                editorCommandsEnabled: root.editorActive
+                chartCommandsEnabled: root.chartEditorActive
+                toolCommandsEnabled: root.documentSession.hasDocument
                 normalizationEnabled: root.pages.activePageId !== "export"
             }
         }
@@ -190,7 +251,10 @@ Item {
             sidebarActive: root.compact
                            ? state.compactPanel === "sidebar"
                            : state.sidebarVisible
-            bottomActive: state.bottomPanelVisible && root.timelineSession.panelVisible
+            bottomActive: state.difficultyEditorActive
+                          && state.bottomPanelVisible && root.timelineSession.panelVisible
+            bottomPanelEnabled: state.difficultyEditorActive
+            saveEnabled: root.editorActive
             canUndo: splitView.canUndo
             canRedo: splitView.canRedo
             onToggleSidebarRequested: root.toggleSidebar()
@@ -220,8 +284,8 @@ Item {
                 backgroundOffset: root.mapToItem(root.backgroundSource,
                                                  mainViewHost.x, mainViewHost.y)
                 viewState: state
-        documentSession: root.documentSession
-        analysisSession: root.analysisSession
+                documentSession: root.documentSession
+                analysisSession: root.analysisSession
                 preferences: root.preferences
                 previewSession: root.previewSession
                 commands: root.commands
@@ -232,6 +296,7 @@ Item {
                 editorSync: root.editorSync
                 latency: root.latency
                 compact: root.compact
+                onOpenRequested: openFileDialog.open()
                 onSettingsRequested: preferencesDialog.open()
             }
 
@@ -251,24 +316,26 @@ Item {
             id: statusBar
             width: parent.width
             height: 23
-            difficulty: state.difficultyEditorActive
-                ? root.documentSession.currentDifficultyLabel : ""
-            documentName: state.metadataEditorActive ? "metadata"
-                : state.difficultyEditorActive ? root.documentSession.currentFilePath : ""
+            documentName: root.documentSession.hasDocument
+                ? root.documentSession.currentFilePath : ""
             cursorLine: state.editorCursorLine
             cursorColumn: state.editorCursorColumn
             selectionBeatText: splitView.selectionBeatStatusText
             selectionBeatTooltip: splitView.selectionBeatTooltipText
+            metadataActive: state.metadataEditorActive && !root.pages.overlayActive
+            difficultyActive: state.difficultyEditorActive && !root.pages.overlayActive
         }
     }
 
     Shortcut {
         sequence: StandardKey.Close
+        enabled: root.editorActive
         onActivated: splitView.requestCloseActiveEditor()
     }
 
     Shortcut {
         sequence: "Ctrl+F4"
+        enabled: root.editorActive
         onActivated: splitView.requestCloseActiveEditor()
     }
 
@@ -314,6 +381,8 @@ Item {
         target: root.documentSession
 
         function onDocumentReplaced() {
+            if (!root.documentSession.hasDocument)
+                state.activeSidebarView = "chart"
             state.resetEditorTabs(root.documentSession.currentDifficultyId)
             // The projection is queued, so this can run while the incoming
             // document's active difficulty is not set yet. Healing here means a
@@ -328,6 +397,8 @@ Item {
         }
 
         function onCurrentDifficultyChanged() {
+            if (root.documentSession.currentDifficultyId <= 0)
+                normalizeDialog.close()
             state.syncDifficultyEditors(root.documentSession.difficulties,
                                         root.documentSession.currentDifficultyId)
         }
@@ -408,6 +479,7 @@ Item {
         id: mediaToolsDialog
         objectName: "shellMediaToolsDialog"
         mediaTools: root.mediaTools
+        documentAvailable: root.documentSession.hasDocument
         onPrependRequested: function(isTrack) {
             const context = root.mediaTools.prependContext(isTrack)
             // An unavailable target has already explained itself as a notice.

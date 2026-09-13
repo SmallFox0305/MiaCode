@@ -6,12 +6,13 @@ import MiaCode.UI
 Rectangle {
     id: root
 
-    property string difficulty: ""
     property string documentName: ""
     property int cursorLine: 1
     property int cursorColumn: 1
     property string selectionBeatText: ""
     property string selectionBeatTooltip: ""
+    property bool metadataActive: false
+    property bool difficultyActive: false
 
     implicitHeight: 23
     color: Theme.surfaceColor(Theme.colors.background.statusBar)
@@ -31,11 +32,6 @@ Rectangle {
         spacing: 14
 
         StatusText {
-            visible: root.difficulty.length > 0
-            text: root.difficulty
-            Layout.preferredWidth: implicitWidth
-        }
-        StatusText {
             Layout.fillWidth: true
             text: root.documentName
             visible: text.length > 0
@@ -44,17 +40,24 @@ Rectangle {
         Item { Layout.fillWidth: root.documentName.length === 0 }
 
         StatusText {
+            text: "metadata"
+            visible: root.metadataActive
+            Layout.preferredWidth: implicitWidth
+        }
+        StatusText {
             text: qsTrId("qml.line_1_column_2").arg(root.cursorLine).arg(root.cursorColumn)
+            visible: root.difficultyActive
             Layout.preferredWidth: implicitWidth
         }
         StatusText {
             text: root.selectionBeatText
             tooltipText: root.selectionBeatTooltip
-            visible: text.length > 0
+            visible: root.difficultyActive && text.length > 0
             Layout.preferredWidth: implicitWidth
         }
         StatusText {
             text: "simai"
+            visible: root.difficultyActive
             Layout.preferredWidth: implicitWidth
         }
     }
@@ -62,7 +65,7 @@ Rectangle {
     component StatusText: Text {
         id: statusText
         property string tooltipText: ""
-        color: Theme.colors.text.status
+        color: enabled ? Theme.colors.text.status : Theme.colors.text.disabled
         font.family: Theme.uiFont
         font.pixelSize: Theme.secondaryFontSize
 

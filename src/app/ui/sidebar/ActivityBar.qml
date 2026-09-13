@@ -7,6 +7,9 @@ Rectangle {
     id: root
 
     property string activeView: "chart"
+    property bool documentAvailable: true
+    property bool toolsAvailable: true
+    property bool chartEditorAvailable: true
     property bool normalizationEnabled: true
     signal viewRequested(string viewId)
     signal toolRequested(string toolId)
@@ -29,6 +32,7 @@ Rectangle {
         ActivityButton {
             iconSource: Qt.resolvedUrl("icons/export.svg")
             tooltip: qsTrId("sidebar.export")
+            enabled: root.documentAvailable
             selected: root.activeView === "export"
             onClicked: root.viewRequested("export")
         }
@@ -36,6 +40,7 @@ Rectangle {
             id: toolsButton
             iconSource: Qt.resolvedUrl("icons/tools.svg")
             tooltip: qsTrId("qml.tools")
+            enabled: root.toolsAvailable
             selected: toolsPopup.active
             onClicked: {
                 if (toolsPopup.active)
@@ -52,17 +57,24 @@ Rectangle {
 
         AppMenuAction {
             text: qsTrId("qml.latency_calibration")
+            enabled: root.toolsAvailable
             onTriggered: root.toolRequested("latency")
         }
         AppMenuAction {
             text: qsTrId("media_tools.audio_video_processing")
+            enabled: root.toolsAvailable
             onTriggered: root.toolRequested("media")
         }
         AppMenuAction {
             text: qsTrId("qml.normalize_whole_chart")
-            enabled: root.normalizationEnabled
+            enabled: root.chartEditorAvailable && root.normalizationEnabled
             onTriggered: root.toolRequested("normalize")
         }
+    }
+
+    onToolsAvailableChanged: {
+        if (!toolsAvailable)
+            toolsPopup.close()
     }
 
     ActivityButton {
@@ -91,7 +103,8 @@ Rectangle {
             height: Theme.activityIconSize
             source: button.iconSource
             sourceSize: Qt.size(Theme.activityIconSize, Theme.activityIconSize)
-            color: button.selected ? Theme.colors.activityIcon.active
+            color: !button.enabled ? Theme.colors.text.disabled
+                 : button.selected ? Theme.colors.activityIcon.active
                  : button.hovered ? Theme.colors.activityIcon.hover
                  : Theme.colors.activityIcon.idle
         }
