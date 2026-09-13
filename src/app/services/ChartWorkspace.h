@@ -38,6 +38,8 @@ struct ChartWorkspaceSnapshot {
     bool hasDocument = false;
     // 正文与保存点不同的难度。
     QVector<int> dirtyDifficultyIds;
+    // 打开一份工程或关闭当前工程时递增。同一工程内的保存、改路径、换难度保持不变。
+    quint64 documentOpenGeneration = 0;
 };
 
 struct ChartWorkspaceResult {
@@ -158,6 +160,7 @@ private:
     bool hasDocument_ = false;
     bool dirty_ = false;
     bool unifiedDesignerEnabled_ = false;
+    quint64 documentOpenGeneration_ = 0;
 };
 
 }  // namespace miacode

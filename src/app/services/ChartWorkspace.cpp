@@ -124,6 +124,7 @@ ChartWorkspaceResult ChartWorkspace::openSource(
     activeDifficultyId_ = resolveOpenDifficultyId(document_, requestedDifficulty);
     filePath_ = filePath;
     hasDocument_ = true;
+    ++documentOpenGeneration_;
     // A new document arrives with the mode off. Whether the project's stored
     // preference may turn it back on is the application layer's decision, and
     // it is made without writing a single byte into the document.
@@ -407,6 +408,7 @@ ChartWorkspaceResult ChartWorkspace::closeDocument()
     hasDocument_ = false;
     dirty_ = false;
     unifiedDesignerEnabled_ = false;
+    ++documentOpenGeneration_;
     return commit();
 }
 
@@ -548,7 +550,7 @@ bool ChartWorkspace::metadataDirty() const
 ChartWorkspaceSnapshot ChartWorkspace::snapshot() const
 {
     return {sourceText_, filePath_, activeDifficultyId_, revision_, dirty_, hasDocument_,
-            computeDirtyDifficultyIds()};
+            computeDirtyDifficultyIds(), documentOpenGeneration_};
 }
 
 const SimaiDocument& ChartWorkspace::document() const

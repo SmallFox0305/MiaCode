@@ -314,10 +314,11 @@ double miacode::runtime::PlaybackCoordinator::canvasAspectRatio() const
 
 QStringList miacode::runtime::PlaybackCoordinator::statsTexts() const
 {
+    if (state_.previewProgressStatsCache_ == nullptr) {
+        return {};
+    }
     const miacode::preview::scene::PreviewObjectStatsSnapshot stats =
-        state_.previewProgressStatsCache_ != nullptr
-            ? state_.previewProgressStatsCache_->snapshotAt(qMax(0.0, state_.pauseSecond_))
-            : miacode::preview::scene::PreviewObjectStatsSnapshot();
+        state_.previewProgressStatsCache_->snapshotAt(qMax(0.0, state_.pauseSecond_));
     const auto fmt = [](const QString& name, int played, int total) {
         return QString("%1  %2/%3")
             .arg(name.leftJustified(5, QChar(' '), true))

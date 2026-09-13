@@ -236,6 +236,10 @@ bool verifyWorkspaceOwnsProductionDocumentAndDirty(QTextStream& err)
         QStringLiteral("src/app/runtime/SessionBootstrap.cpp"));
     const QString documentFileFlow = sourceFile(
         QStringLiteral("src/app/runtime/document/DocumentFileFlow.cpp"));
+    const QString documentPages = sourceFile(
+        QStringLiteral("src/app/runtime/document/DocumentPages.cpp"));
+    const QString sourceEditor = sourceFile(
+        QStringLiteral("src/app/ui/editor/SourceEditor.qml"));
 
     // The owner moved to the non-Widget assembly in stage 3.5 item 1; the count
     // is what matters and it is still one apiece, reached by reference.
@@ -315,7 +319,20 @@ bool verifyWorkspaceOwnsProductionDocumentAndDirty(QTextStream& err)
                        && timelineFlow.contains(QStringLiteral("upsertExtraField(QStringLiteral(\"clock_count\")")),
                    QStringLiteral("latency BPM, offset, and clock_count write the workspace"), err)
         && require(fileFlow.contains(QStringLiteral("session_.qmlDocumentSaveHandler_(path)")),
-                   QStringLiteral("legacy close-save routing delegates durable writes to the workspace file service"), err);
+                   QStringLiteral("legacy close-save routing delegates durable writes to the workspace file service"), err)
+        && require(containsAfter(documentFileFlow,
+                                 QStringLiteral("void miacode::runtime::DocumentSessionHost::syncRuntimeFromWorkspace()"),
+                                 QStringLiteral("documentIdentityChanged"))
+                       && containsAfter(documentFileFlow,
+                                        QStringLiteral("void miacode::runtime::DocumentSessionHost::resetWorkingPosition()"),
+                                        QStringLiteral("clearTimelineAndPreview();"))
+                       && containsAfter(documentFileFlow,
+                                        QStringLiteral("void miacode::runtime::DocumentSessionHost::resetWorkingPosition()"),
+                                        QStringLiteral("repositionSilently(0.0, \"reset_working_position\")"))
+                       && documentPages.contains(QStringLiteral("!session_.resetWorkingPositionPending_"))
+                       && sourceEditor.contains(QStringLiteral("function resetCaretIfDocumentOpened()"))
+                       && sourceEditor.contains(QStringLiteral("root.resetCaretToDocumentStart()")),
+                   QStringLiteral("opening or closing a document resets playhead, timeline scroll, and editor caret; difficulty switches inside one open document keep them"), err);
 }
 
 bool verifyPageNavigationUsesTheQmlLeaveGuard(QTextStream& err)

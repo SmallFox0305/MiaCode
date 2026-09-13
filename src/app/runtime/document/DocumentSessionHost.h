@@ -133,6 +133,7 @@ public:
     void activateInitialField();
     void loadDocument();
     void syncRuntimeFromWorkspace();
+    void resetWorkingPosition();
     void clearTimelineAndPreview(bool preservePresentation = false);
     void rebuildAutosaveMetadata(const QString& autosaveDirectoryPath) const;
 
@@ -144,6 +145,7 @@ public:
                                 CommitKind kind, bool usedSystemEncoding) override;
     QVariantList recentDocumentEntries() override;
     void noteRecentDocument(const QString& path) override;
+    void removeRecentDocument(const QString& path) override;
     void restoreBackupDocument(const QString& path) override;
     miacode::chart_transform::ChartNormalizationOptions normalizationOptions() const override;
     void setNormalizationOptions(

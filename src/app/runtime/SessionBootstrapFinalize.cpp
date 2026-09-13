@@ -288,14 +288,13 @@ void Session::finishFrameBootstrap(const std::function<void(const QString&)>& lo
     updatePauseButtonAppearance();
     const bool restoredStartupDocument = restoreLastSessionFile();
     if (!restoredStartupDocument) {
-        applicationServices_.workspace().openSource(SimaiDocument::createEmpty().toText());
-        loadDocument();
-        logStartupStage("initial_empty_document_applied");
+        logStartupStage("initial_welcome_page_applied");
     } else {
         logStartupStage("initial_last_session_document_applied");
     }
     publishPreviewPlayhead();
-    logStartupStage("initial_document_loaded");
+    logStartupStage(restoredStartupDocument
+        ? "initial_document_loaded" : "initial_welcome_page_ready");
     qtPreviewWatchdogElapsed_.start();
     logStartupStage("preview_media_controller_lazy_init_deferred");
     QTimer::singleShot(0, this, [this]() {

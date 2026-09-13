@@ -45,6 +45,7 @@ class PreviewModel final : public QObject
     Q_PROPERTY(int muriTapOnSlideThresholdMs READ muriTapOnSlideThresholdMs NOTIFY muriParametersChanged)
     Q_PROPERTY(QVariantMap muriParameterRanges READ muriParameterRanges CONSTANT)
     Q_PROPERTY(QVariantList statistics READ statistics NOTIFY statisticsChanged)
+    Q_PROPERTY(bool statisticsAvailable READ statisticsAvailable NOTIFY statisticsChanged)
     Q_PROPERTY(QObject* runtime READ runtime CONSTANT)
     Q_PROPERTY(QObject* mediaHost READ mediaHost CONSTANT)
     // Aspect of the preview canvas, used by the split view to size the pane.
@@ -69,6 +70,7 @@ public:
     int muriTapOnSlideThresholdMs() const;
     QVariantMap muriParameterRanges() const;
     QVariantList statistics() const;
+    bool statisticsAvailable() const;
     QString currentSkinDirectory() const;
     QObject* runtime() const;
     QObject* mediaHost() const;
@@ -140,6 +142,7 @@ private:
     int muriHandRadiusPx_ = miacode::muri::kHandRadiusDefaultPx;
     int muriTapOnSlideThresholdMs_ = miacode::muri::kStaticTapOnSlideThresholdDefaultMs;
     QStringList statisticsTexts_;
+    bool statisticsAvailable_ = false;
     QString skinDirectory_;
     QVariantList statistics_;
     bool v2UiProbeEnabled_ = false;

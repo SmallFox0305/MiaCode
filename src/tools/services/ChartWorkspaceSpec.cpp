@@ -493,6 +493,31 @@ bool verifyDifficultyRemovalIsAMetadataChange(QTextStream& out)
     return ok;
 }
 
+bool verifyDocumentOpenGenerationAdvancesOnOpenAndClose(QTextStream& out)
+{
+    miacode::ChartWorkspace workspace;
+    const quint64 initial = workspace.snapshot().documentOpenGeneration;
+    workspace.openSource(sourceWithTwoDifficulties(), QStringLiteral("a.txt"));
+    const quint64 afterOpen = workspace.snapshot().documentOpenGeneration;
+    workspace.markSaved(QStringLiteral("b.txt"));
+    const quint64 afterSaveAs = workspace.snapshot().documentOpenGeneration;
+    workspace.selectDifficulty(6);
+    const quint64 afterSelect = workspace.snapshot().documentOpenGeneration;
+    workspace.replaceSource(sourceWithTwoDifficulties());
+    const quint64 afterReplace = workspace.snapshot().documentOpenGeneration;
+    workspace.closeDocument();
+    const quint64 afterClose = workspace.snapshot().documentOpenGeneration;
+    workspace.openSource(sourceWithTwoDifficulties(), QStringLiteral("c.txt"));
+    const quint64 afterReopen = workspace.snapshot().documentOpenGeneration;
+    return expect(afterOpen > initial
+                      && afterSaveAs == afterOpen
+                      && afterSelect == afterOpen
+                      && afterReplace == afterOpen
+                      && afterClose > afterOpen
+                      && afterReopen > afterClose,
+                  QStringLiteral("open and close advance documentOpenGeneration; save, difficulty select, and source replace do not"), out);
+}
+
 }  // namespace
 
 int main()
@@ -513,7 +538,8 @@ int main()
         && verifyOpenAcceptsEmptyInoteSlots(out)
         && verifyInlineSourceSpanWinsOverLaterLevel(out)
         && verifyOwnedFieldMutationsAndSavePointRebind(out)
-        && verifyExtraFieldTransactionIsAtomic(out);
+        && verifyExtraFieldTransactionIsAtomic(out)
+        && verifyDocumentOpenGenerationAdvancesOnOpenAndClose(out);
     if (!ok) return 1;
     QTextStream result(stdout);
     result << "Chart workspace checks passed." << Qt::endl;

@@ -153,6 +153,34 @@ Rectangle {
         return "difficulty:" + root.documentSession.currentDifficultyId
     }
 
+    property var appliedDocumentOpenGeneration: 0
+
+    function resetCaretToDocumentStart() {
+        if (!sourceArea || !editorScroll)
+            return
+        root.beginProgrammaticSelection()
+        sourceArea.cursorPosition = 0
+        if (sourceArea.selectionStart !== sourceArea.selectionEnd)
+            sourceArea.deselect()
+        root.endProgrammaticSelection()
+        editorScroll.allowScroll = true
+        editorScroll.userViewportY = 0
+        editorScroll.contentY = 0
+        editorScroll.allowScroll = false
+        root.updateCursorPosition()
+        root.applyFollowProjection()
+    }
+
+    function resetCaretIfDocumentOpened() {
+        if (!root.documentSession || !sourceArea || !editorScroll)
+            return
+        const generation = root.documentSession.documentOpenGeneration
+        if (generation === root.appliedDocumentOpenGeneration)
+            return
+        root.appliedDocumentOpenGeneration = generation
+        root.resetCaretToDocumentStart()
+    }
+
     function syncTextFromController() {
         const controllerText = root.documentSession.chartText
         // Named before the text moves: the swap below must not be able to land
@@ -1214,6 +1242,7 @@ Rectangle {
             // reuse the outgoing document's difficulty ids.
             root.editorController.clearAllHistory()
             root.syncTextFromController()
+            root.resetCaretIfDocumentOpened()
             root.documentSession.logEditorDocumentState(
                 "document_replaced", root.documentSession.currentDifficultyId,
                 root.documentSession.documentRevision, sourceArea.text.length)
@@ -1228,6 +1257,7 @@ Rectangle {
             root.publishNavigationReadiness()
             root.scheduleEditorContext(false)
             root.applyFollowProjection()
+            root.resetCaretIfDocumentOpened()
         }
     }
 
