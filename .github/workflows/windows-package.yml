@@ -26,6 +26,7 @@ jobs:
     env:
       # Release artifact marker: MiaCode_<version>_nightly_win_<arch>.
       MIACODE_PACKAGE_CHANNEL: nightly
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -67,12 +68,18 @@ jobs:
           key: build-windows-x64-qt6.11.1-ffmpeg7.1-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'resources/**', 'translations/**', 'third_party/**') }}
           restore-keys: build-windows-x64-qt6.11.1-ffmpeg7.1-
 
+      - name: Set up compiler cache
+        if: steps.package-cache.outputs.cache-hit != 'true'
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Build and package
         if: steps.package-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $jobs = [int]$env:NUMBER_OF_PROCESSORS
+          $env:CMAKE_C_COMPILER_LAUNCHER = "sccache"
+          $env:CMAKE_CXX_COMPILER_LAUNCHER = "sccache"
           ./scripts/build/build-win.ps1 -Toolchain msvc -BuildDir build-msvc -BuildJobs $jobs
 
       - name: Save media kit
