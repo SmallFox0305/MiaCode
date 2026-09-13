@@ -3,6 +3,7 @@
 #include <QByteArray>
 #include <QDate>
 #include <QDateTime>
+#include <QHash>
 #include <QList>
 #include <QNetworkAccessManager>
 #include <QString>
@@ -123,6 +124,11 @@ public:
         const std::atomic_bool* cancelRequested = nullptr);
 
 private:
+    struct QueryCandidateCacheEntry {
+        QList<NetChartSummary> charts;
+        qint64 expiresAtMs = 0;
+    };
+
     QList<NetChartSummary> querySearchText(
         const QString& searchText,
         const QString& referer,
@@ -130,6 +136,7 @@ private:
     QByteArray getUrl(const QUrl& url, const QString& referer, QString* errorMessage, bool* blockingResponse);
 
     QNetworkAccessManager manager_;
+    QHash<QString, QueryCandidateCacheEntry> queryCandidateCache_;
 };
 
 }  // namespace miacode::net

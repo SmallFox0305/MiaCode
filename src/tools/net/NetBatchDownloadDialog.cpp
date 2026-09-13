@@ -778,11 +778,17 @@ void NetBatchDownloadDialog::queryCharts()
         return;
     }
 
-    const QList<NetChartSummary> dateFiltered =
-        filterChartsByLocalDateRange(queriedCharts, startDateEdit_->date(), endDateEdit_->date());
+    const QDate safeStart = qMin(startDateEdit_->date(), endDateEdit_->date());
+    const QDate safeEnd = qMax(startDateEdit_->date(), endDateEdit_->date());
+    int dateFilteredCount = 0;
     QList<NetChartSummary> filtered;
-    filtered.reserve(dateFiltered.size());
-    for (const NetChartSummary& chart : dateFiltered) {
+    filtered.reserve(queriedCharts.size());
+    for (const NetChartSummary& chart : queriedCharts) {
+        const QDate localUploadDate = chart.timestampUtc.toLocalTime().date();
+        if (localUploadDate < safeStart || localUploadDate > safeEnd) {
+            continue;
+        }
+        ++dateFilteredCount;
         if (chartMatchesUserKeyword(chart, username, caseSensitivity)
             && chartMatchesTagKeyword(chart, tag, caseSensitivity)
             && chartMatchesTitleKeyword(chart, title, caseSensitivity)) {
@@ -797,7 +803,7 @@ void NetBatchDownloadDialog::queryCharts()
     appendLog(UiText::text(QStringLiteral("net.query_complete_1_ms_api"))
                   .arg(elapsed.elapsed())
                   .arg(queriedCharts.size())
-                  .arg(dateFiltered.size())
+                  .arg(dateFilteredCount)
                   .arg(filtered.size()));
 }
 

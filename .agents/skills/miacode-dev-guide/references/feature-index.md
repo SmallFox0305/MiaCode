@@ -1073,7 +1073,12 @@ Map a user-facing feature to the files / classes / functions that own it. Paths 
 - Query/resource transport and parsing: `NetClient.{h,cpp}`. The batch-download UI and worker are
   `NetBatchDownloadDialog.*` / `NetBatchDownloadWorker.*`; pure list sorting (highest numeric level,
   upload time, or displayed download status; both directions) is owned by `sortNetDownloadJobs` and
-  covered by `net_client_spec`.
+  covered by `net_client_spec`. Multi-field searches use one server-side candidate source rather
+  than querying every populated field: a non-expired per-dialog cache wins, otherwise the anchor
+  priority is uploader, tag, then title. Candidate caches are keyed by field, normalized value, and
+  case-sensitivity mode and expire after five minutes. Date, uploader, tag, and title predicates are
+  then applied together in one local pass; changing only a non-anchor field reuses the cached
+  candidate superset without another network request.
 - The result table intentionally omits the internal chart ID column. Its eight visible data columns
   initialize once at `5:20:15:15:10:18:7:10` (selection/title/artist/designer/levels/uploaded/
   status/online preview), then preserve user-resized widths across refreshes. Online Preview is the

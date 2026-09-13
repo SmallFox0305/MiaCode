@@ -29,6 +29,7 @@ constexpr int kRequestTimeoutMs = 60000;
 constexpr int kConnectionProbeTimeoutMs = 8000;
 constexpr int kRemoteHostClosedRetryDelayMs = 1000;
 constexpr int kRemoteHostClosedMaxRetries = 1;
+constexpr qint64 kQueryCandidateCacheLifetimeMs = 5 * 60 * 1000;
 
 QString stringValue(const QJsonObject& object, const QString& key)
 {
@@ -251,6 +252,32 @@ QString formatLevels(const QStringList& levels)
     }
     return nonEmpty.join(QStringLiteral(" / "));
 }
+
+namespace {
+
+QString normalizedTagKeyword(const QString& tagKeyword)
+{
+    QString normalized = tagKeyword.trimmed();
+    if (normalized.startsWith(QStringLiteral("tag:"), Qt::CaseInsensitive)) {
+        normalized = normalized.mid(4).trimmed();
+    }
+    return normalized;
+}
+
+QString queryCandidateCacheKey(
+    const QString& field,
+    const QString& value,
+    bool fuzzyCaseInsensitive)
+{
+    QString normalizedValue = value.trimmed();
+    if (fuzzyCaseInsensitive) {
+        normalizedValue = normalizedValue.toLower();
+    }
+    return QStringLiteral("%1\n%2\n%3")
+        .arg(field, fuzzyCaseInsensitive ? QStringLiteral("i") : QStringLiteral("s"), normalizedValue);
+}
+
+}  // namespace
 
 void sortNetDownloadJobs(QList<NetDownloadJob>* jobs, NetDownloadSortOrder order)
 {
@@ -534,23 +561,83 @@ QList<NetChartSummary> NetClient::queryCharts(
     const NetQueryOptions& options,
     QString* errorMessage)
 {
+    if (errorMessage != nullptr) {
+        errorMessage->clear();
+    }
     const QString trimmedUser = username.trimmed();
     const QString tagSearch = tagSearchQueryFor(tagKeyword);
+    const QString plainTag = normalizedTagKeyword(tagKeyword);
     const QString titleSearch = options.titleKeyword.trimmed();
+    if (trimmedUser.isEmpty() && tagSearch.isEmpty() && titleSearch.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Please enter a user ID, tag, or song title.");
+        }
+        return {};
+    }
+
+    enum class QueryField {
+        Uploader,
+        Tag,
+        Title,
+    };
+
+    struct QueryCandidateSource {
+        QueryField field;
+        QString cacheKey;
+    };
+    QList<QueryCandidateSource> sources;
+    if (!trimmedUser.isEmpty()) {
+        sources.append({
+            QueryField::Uploader,
+            queryCandidateCacheKey(QStringLiteral("uploader"), trimmedUser, options.fuzzyCaseInsensitive),
+        });
+    }
+    if (!tagSearch.isEmpty()) {
+        sources.append({
+            QueryField::Tag,
+            queryCandidateCacheKey(QStringLiteral("tag"), plainTag, options.fuzzyCaseInsensitive),
+        });
+    }
+    if (!titleSearch.isEmpty()) {
+        sources.append({
+            QueryField::Title,
+            queryCandidateCacheKey(QStringLiteral("title"), titleSearch, options.fuzzyCaseInsensitive),
+        });
+    }
+
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    for (auto cached = queryCandidateCache_.begin(); cached != queryCandidateCache_.end();) {
+        if (cached->expiresAtMs <= nowMs) {
+            cached = queryCandidateCache_.erase(cached);
+        } else {
+            ++cached;
+        }
+    }
+    // A candidate set for any populated AND predicate is a superset of the
+    // final result, so an unchanged cached predicate can avoid all network work.
+    for (const QueryCandidateSource& source : std::as_const(sources)) {
+        const auto cached = queryCandidateCache_.constFind(source.cacheKey);
+        if (cached != queryCandidateCache_.cend() && cached->expiresAtMs > nowMs) {
+            return cached->charts;
+        }
+    }
+
     QList<NetChartSummary> merged;
     QSet<QString> seenIds;
-
     const auto appendUnique = [&](const QList<NetChartSummary>& charts) {
         for (const NetChartSummary& chart : charts) {
-            if (seenIds.contains(chart.id)) {
-                continue;
+            if (!seenIds.contains(chart.id)) {
+                seenIds.insert(chart.id);
+                merged.append(chart);
             }
-            seenIds.insert(chart.id);
-            merged.append(chart);
         }
     };
 
-    if (!trimmedUser.isEmpty()) {
+    // Without a reusable candidate set, query only the most selective source.
+    // The dialog applies every populated predicate locally below this boundary.
+    const QueryCandidateSource source = sources.constFirst();
+    switch (source.field) {
+    case QueryField::Uploader: {
         const QString referer = netUserSpaceReferer(trimmedUser);
         const QString exactQuery = QStringLiteral("uploader:%1").arg(trimmedUser);
         QSet<QString> attemptedQueries{exactQuery};
@@ -573,8 +660,9 @@ QList<NetChartSummary> NetClient::queryCharts(
                 }
             }
         }
+        break;
     }
-    if (trimmedUser.isEmpty() && !tagSearch.isEmpty()) {
+    case QueryField::Tag: {
         appendUnique(querySearchText(tagSearch, QStringLiteral("https://majdata.net/"), errorMessage));
         if (errorMessage != nullptr && !errorMessage->isEmpty()) {
             return {};
@@ -586,10 +674,6 @@ QList<NetChartSummary> NetClient::queryCharts(
                 if (errorMessage != nullptr && !errorMessage->isEmpty()) {
                     return {};
                 }
-            }
-            QString plainTag = tagKeyword.trimmed();
-            if (plainTag.startsWith(QStringLiteral("tag:"), Qt::CaseInsensitive)) {
-                plainTag = plainTag.mid(4).trimmed();
             }
             if (!plainTag.isEmpty() && plainTag != tagSearch) {
                 appendUnique(querySearchText(plainTag, QStringLiteral("https://majdata.net/"), errorMessage));
@@ -605,8 +689,9 @@ QList<NetChartSummary> NetClient::queryCharts(
                 }
             }
         }
+        break;
     }
-    if (!titleSearch.isEmpty()) {
+    case QueryField::Title:
         appendUnique(querySearchText(titleSearch, QStringLiteral("https://majdata.net/"), errorMessage));
         if (errorMessage != nullptr && !errorMessage->isEmpty()) {
             return {};
@@ -620,10 +705,13 @@ QList<NetChartSummary> NetClient::queryCharts(
                 }
             }
         }
+        break;
     }
-    if (trimmedUser.isEmpty() && tagSearch.isEmpty() && titleSearch.isEmpty() && errorMessage != nullptr) {
-        *errorMessage = QStringLiteral("Please enter a user ID, tag, or song title.");
-    }
+
+    queryCandidateCache_.insert(source.cacheKey, {
+        merged,
+        QDateTime::currentMSecsSinceEpoch() + kQueryCandidateCacheLifetimeMs,
+    });
     return merged;
 }
 

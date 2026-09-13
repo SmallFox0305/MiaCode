@@ -93,6 +93,8 @@ shared config header. Ported with paths corrected (2026-05-29); verify against c
   mapping (`Fast`/`High Quality`), application of the runtime size policy, and ffmpeg fallback.
 - `src/tools/video_export/RawVideoPipeTransport.cpp` — pipe queue depth / buffer sizing
   (`maxBufferedFrames` derived from frame size, ×2; `requestedBufferBytes` `2 * max(frameBytes,1MiB)`).
+- `src/tools/net/NetClient.cpp` — Net batch-query candidate cache lifetime (`5 minutes`), scoped
+  to one client/dialog session and keyed by field, normalized value, and case-sensitivity mode.
 - `src/tools/media/PvCompressionPolicy.{h,cpp}` — shared current-chart and batch-PV compression
   policy. The hard limit is decimal `20,000,000` bytes and the two-pass x264 working target is
   `19,500,000` bytes; an oversized first result gets one measured-size bitrate correction with a
