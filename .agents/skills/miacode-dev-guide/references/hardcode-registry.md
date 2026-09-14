@@ -84,7 +84,7 @@ shared config header. Ported with paths corrected (2026-05-29); verify against c
   modes) and compiles these as no-op stubs. Paused-seek ack tolerance `kPausedSeekAckToleranceMs`
   (`80 ms`) is shared by both backends.
 - `src/tools/latency/` — detection windows, hop sizes, BPM scan range, offset penalties, snap
-  thresholds.
+  thresholds, plus the latency-page fine-tune steps (`0.01 BPM`, `0.001 s` offset).
 - `src/core/chart/transform/ChartNormalization.cpp` — whole-chart format snap constants
   (`384`-grid, `16th-note` denominator floor).
 - `src/core/chart/parser/SimaiNativeParser.cpp` — parser default geometry/timing assumptions
@@ -95,6 +95,10 @@ shared config header. Ported with paths corrected (2026-05-29); verify against c
   (`maxBufferedFrames` derived from frame size, ×2; `requestedBufferBytes` `2 * max(frameBytes,1MiB)`).
 - `src/tools/net/NetClient.cpp` — Net batch-query candidate cache lifetime (`5 minutes`), scoped
   to one client/dialog session and keyed by field, normalized value, and case-sensitivity mode.
+- `src/tools/video_export/VideoExportEstimateHistory.cpp` — local ETA history schema and retention
+  (`miacode_export_performance_v1`, 64 successful samples), profile validation bounds, nearest-eight
+  weighted-median prediction. `MainWindow.ExportWorker.cpp` owns the history/live ETA blend thresholds.
+  These remain implementation-local; the persisted sample deliberately excludes chart/media identity.
 - `src/tools/media/PvCompressionPolicy.{h,cpp}` — shared current-chart and batch-PV compression
   policy. The hard limit is decimal `20,000,000` bytes and the two-pass x264 working target is
   `19,500,000` bytes; an oversized first result gets one measured-size bitrate correction with a

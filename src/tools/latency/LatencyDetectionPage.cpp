@@ -23,6 +23,8 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPaintEvent>
+#include <QPainter>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QScrollArea>
@@ -34,7 +36,9 @@
 #include <QSize>
 #include <QSlider>
 #include <QSpinBox>
+#include <QStyleOptionToolButton>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include <QWheelEvent>
 
@@ -48,6 +52,8 @@ constexpr int kEditDebounceMs = 300;
 constexpr int kDefaultSfxVolumePercent = 50;
 constexpr int kDecimalsBpm = 3;
 constexpr int kDecimalsOffset = 3;
+constexpr double kBpmFineTuneStep = 0.01;
+constexpr double kOffsetFineTuneStepSeconds = 0.001;
 
 QString latencySfxVolumeSettingsKey()
 {
@@ -89,6 +95,84 @@ public:
 protected:
     void wheelEvent(QWheelEvent* event) override { event->ignore(); }
 };
+
+class FineTuneButton final : public QToolButton
+{
+public:
+    FineTuneButton(bool pointsUp, QWidget* parent)
+        : QToolButton(parent)
+        , pointsUp_(pointsUp)
+    {
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        QToolButton::paintEvent(event);
+
+        QStyleOptionToolButton option;
+        initStyleOption(&option);
+        const QPointF center = QRectF(rect()).center();
+        const qreal direction = pointsUp_ ? -1.0 : 1.0;
+        QPolygonF arrow;
+        arrow << QPointF(center.x(), center.y() + direction * 2.5)
+              << QPointF(center.x() - 3.5, center.y() - direction * 1.5)
+              << QPointF(center.x() + 3.5, center.y() - direction * 1.5);
+
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(option.palette.color(QPalette::ButtonText));
+        painter.drawPolygon(arrow);
+    }
+
+private:
+    bool pointsUp_ = true;
+};
+
+QWidget* createFineTuneField(
+    QDoubleSpinBox* editor,
+    double fineStep,
+    const QString& stepLabel,
+    QWidget* parent)
+{
+    auto* field = new QWidget(parent);
+    auto* fieldLayout = new QHBoxLayout(field);
+    fieldLayout->setContentsMargins(0, 0, 0, 0);
+    fieldLayout->setSpacing(6);
+    fieldLayout->addWidget(editor);
+
+    auto* buttonGroup = new QFrame(field);
+    buttonGroup->setObjectName(QStringLiteral("LatencyFineTuneGroup"));
+    buttonGroup->setFixedSize(26, 34);
+    auto* buttonLayout = new QVBoxLayout(buttonGroup);
+    buttonLayout->setContentsMargins(1, 1, 1, 1);
+    buttonLayout->setSpacing(0);
+
+    const auto addButton = [&](bool pointsUp, double delta, const char* edge,
+                               const QString& textKey) {
+        auto* button = new FineTuneButton(pointsUp, buttonGroup);
+        button->setObjectName(QStringLiteral("LatencyFineTuneButton"));
+        button->setProperty("fineEdge", QString::fromLatin1(edge));
+        button->setCursor(Qt::PointingHandCursor);
+        button->setAutoRepeat(true);
+        button->setAutoRepeatDelay(350);
+        button->setAutoRepeatInterval(75);
+        button->setFixedSize(24, 16);
+        const QString description = UiText::text(textKey).arg(stepLabel);
+        button->setToolTip(description);
+        button->setAccessibleName(description);
+        QObject::connect(button, &QToolButton::clicked, editor, [editor, delta]() {
+            editor->setValue(editor->value() + delta);
+        });
+        buttonLayout->addWidget(button);
+    };
+
+    addButton(true, fineStep, "top", QStringLiteral("latency.fine_increase_1"));
+    addButton(false, -fineStep, "bottom", QStringLiteral("latency.fine_decrease_1"));
+    fieldLayout->addWidget(buttonGroup, 0, Qt::AlignVCenter);
+    return field;
+}
 
 }  // namespace
 
@@ -357,7 +441,10 @@ void LatencyDetectionPage::buildUi()
     bpmEdit_->setAccelerated(true);
     connect(bpmEdit_, qOverload<double>(&QDoubleSpinBox::valueChanged),
             this, &LatencyDetectionPage::onBpmEditValueChanged);
-    paramGrid->addWidget(bpmEdit_, 0, 1, Qt::AlignVCenter);
+    paramGrid->addWidget(
+        createFineTuneField(
+            bpmEdit_, kBpmFineTuneStep, QStringLiteral("0.01 BPM"), paramCard),
+        0, 1, Qt::AlignVCenter);
     detectBpmButton_ = new QPushButton(
         UiText::text(QStringLiteral("latency.auto_detect")), paramCard);
     detectBpmButton_->setCursor(Qt::PointingHandCursor);
@@ -387,7 +474,13 @@ void LatencyDetectionPage::buildUi()
     offsetEdit_->setSuffix(UiText::text(QStringLiteral("latency.s")));
     connect(offsetEdit_, qOverload<double>(&QDoubleSpinBox::valueChanged),
             this, &LatencyDetectionPage::onOffsetEditValueChanged);
-    paramGrid->addWidget(offsetEdit_, 1, 1, Qt::AlignVCenter);
+    paramGrid->addWidget(
+        createFineTuneField(
+            offsetEdit_,
+            kOffsetFineTuneStepSeconds,
+            QStringLiteral("0.001 s"),
+            paramCard),
+        1, 1, Qt::AlignVCenter);
     detectOffsetButton_ = new QPushButton(
         UiText::text(QStringLiteral("latency.auto_detect")), paramCard);
     detectOffsetButton_->setCursor(Qt::PointingHandCursor);

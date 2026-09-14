@@ -78,6 +78,8 @@ bool verifyExplicitStartupTargetSkipsSessionRestore(QTextStream& err)
     const QString bootstrap = readSource(QStringLiteral("src/app/quick_shell/QuickShellBootstrap.cpp"));
     const QString frameBootstrap =
         readSource(QStringLiteral("src/app/mainwindow/sections/frame/MainWindow.FrameBootstrapFinalize.cpp"));
+    const QString documentFlow =
+        readSource(QStringLiteral("src/app/mainwindow/sections/document/MainWindow.DocumentFlow.cpp"));
     return require(
                bootstrap.contains(QStringLiteral("!startupOpenTarget.trimmed().isEmpty()")),
                QStringLiteral("QuickShell must tell MainWindow when an explicit startup target is pending"),
@@ -86,6 +88,10 @@ bool verifyExplicitStartupTargetSkipsSessionRestore(QTextStream& err)
             frameBootstrap.contains(
                 QStringLiteral("!explicitStartupOpenPending && restoreLastSessionFile()")),
             QStringLiteral("an explicit startup target must take precedence over last-session restoration"),
+            err)
+        && require(
+            documentFlow.contains(QStringLiteral("refreshRecentFilesMenu(recentFilesMenu_)")),
+            QStringLiteral("opening an explicit startup target must refresh the current recent-files menu"),
             err);
 }
 

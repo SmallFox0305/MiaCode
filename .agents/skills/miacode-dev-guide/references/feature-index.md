@@ -10,7 +10,8 @@ Map a user-facing feature to the files / classes / functions that own it. Paths 
   `--quick-shell-beta` routing, file/folder drag-open). An explicit startup file/folder suppresses
   last-session restoration while `MainWindow` is constructed; `QuickShellBootstrap` opens that
   target on the first event-loop turn, so a dragged-folder launch never warms the previous chart
-  before switching to the requested one.
+  before switching to the requested one. Successful opens flow through `addRecentFilePath`, which
+  persists the chart and refreshes the already-created recent-files menu in the same call.
 - Linux GUI startup defaults to the `xcb` QPA plugin when running inside a Wayland session with
   XWayland available. QuickShell embeds native QWidget surfaces through `QWindow::fromWinId()`,
   which the Wayland QPA plugin cannot import. An explicit `QT_QPA_PLATFORM` value wins, and CLI
@@ -494,6 +495,12 @@ Map a user-facing feature to the files / classes / functions that own it. Paths 
   `BassExportAudioBackend.*`, `LegacyExportAudioBackend.*`, `RawVideoPipeTransport.*`,
   `VideoExportRuntimePolicy.*`. Key fns: `exportFullPreview`, `exportPreparedTask`,
   `buildVideoExportAudioRenderPlan`, `chooseVideoEncoder`.
+- Local export-time learning: `VideoExportEstimateHistory.{h,cpp}` stores up to 64 successful,
+  anonymous performance samples under `AppLocalDataLocation/export-performance-history.json`.
+  Samples contain only output dimensions, FPS, content duration, render-quality/file-size presets,
+  elapsed time, and a UTC timestamp—never chart/media paths or metadata. `MainWindow.ExportWorker.cpp`
+  seeds ETA from nearby same-preset samples scaled by rendered work, then gradually blends toward
+  the current run's progress-derived speed. Crashed retries, failures, and cancellations are not learned.
 - File-size presets are independent from render quality: `Standard` preserves the legacy encoder
   tuning, `Compact` lowers video/audio limits while retaining PV, and the two ultra-compact modes
   lower them again; `UltraCompactWithPv` retains PV while `UltraCompact` excludes video backgrounds
@@ -1125,7 +1132,10 @@ Map a user-facing feature to the files / classes / functions that own it. Paths 
 - **UI** is one "谱面参数" (Chart Parameters) card holding three grid rows
   (label / spin / 自动检测 / result) for BPM, 偏移 (Offset), and `clock_count`, plus the
   audition card; the audio/video media-tools launcher sits in the page back-bar (not on
-  the Offset row) so the rows stay uniform. `clock_count` (spin 1–64, default 4) is a
+  the Offset row) so the rows stay uniform. BPM and Offset each have a compact vertical
+  fine-tune control beside the field (`0.01 BPM` / `0.001 s` per click, press-and-hold
+  auto-repeat), while preserving direct entry and the coarser keyboard step. `clock_count`
+  (spin 1–64, default 4) is a
   plain manual field — no auto-detect button and BPM detection does NOT write it — that
   saves through `MainWindow::applyLatencyDetectorClockCount` → `parsedClockCount` →
   `extraFields`. The `自动检测 Offset` entry point is visible here (wiring always intact).

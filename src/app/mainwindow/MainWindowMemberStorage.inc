@@ -251,6 +251,7 @@
         QString videoExportWorkerResultDetails_;
         QString videoExportWorkerFirstCrashDiagnostics_;
         QElapsedTimer videoExportWorkerElapsed_;
+        qint64 videoExportWorkerPredictedTotalMs_ = -1;
         int videoExportWorkerAttempt_ = 0;
         bool videoExportWorkerForceDisablePbo_ = false;
         QString lastSessionFilePath_;
@@ -953,6 +954,7 @@
     bool& workspaceSurfaceSettleRelayoutArmed_ = state_.workspaceSurfaceSettleRelayoutArmed_;
     int& videoExportWorkerLastProgressPercent_ = state_.videoExportWorkerLastProgressPercent_;
     qint64& videoExportWorkerLastEtaSeconds_ = state_.videoExportWorkerLastEtaSeconds_;
+    qint64& videoExportWorkerPredictedTotalMs_ = state_.videoExportWorkerPredictedTotalMs_;
     int& projectLastOpenedDifficultyId_ = state_.projectLastOpenedDifficultyId_;
     bool& documentDirty_ = state_.documentDirty_;
     bool& currentFieldDirty_ = state_.currentFieldDirty_;

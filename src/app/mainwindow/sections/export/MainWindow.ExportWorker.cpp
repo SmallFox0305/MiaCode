@@ -17,6 +17,7 @@
 #include "common/WaveformCache.h"
 #include "preview/runtime/PreviewRuntime.h"
 #include "tools/video_export/VideoExportController.h"
+#include "tools/video_export/VideoExportEstimateHistory.h"
 #include "tools/video_export/VideoExportRuntimePolicy.h"
 #include "tools/video_export/VideoExportDialog.h"
 
@@ -482,7 +483,8 @@ QString buildExportProgressLabelTextForUiLanguage(
     const QString& rawMessage,
     int percent,
     const QElapsedTimer& elapsed,
-    qint64* smoothedEtaSeconds
+    qint64* smoothedEtaSeconds,
+    qint64 predictedTotalMs
 )
 {
     QString text = localizeExportWorkerMessageForUiLanguage(rawMessage.trimmed());
@@ -495,18 +497,35 @@ QString buildExportProgressLabelTextForUiLanguage(
         }
         return text;
     }
-    if (!elapsed.isValid() || percent < 5) {
+    if (!elapsed.isValid()) {
         return text;
     }
 
     const qint64 elapsedMs = elapsed.elapsed();
-    if (elapsedMs < 1500) {
-        return text;
+    double estimatedRemainingMs = -1.0;
+    const bool hasHistoricalEstimate = predictedTotalMs > elapsedMs;
+    if (hasHistoricalEstimate) {
+        estimatedRemainingMs = static_cast<double>(predictedTotalMs - elapsedMs);
     }
 
-    const double totalMs = (static_cast<double>(elapsedMs) * 100.0) / static_cast<double>(percent);
-    const qint64 estimatedRemainingSeconds =
-        qRound64(qMax(0.0, totalMs - static_cast<double>(elapsedMs)) / 1000.0);
+    if (percent >= 5 && elapsedMs >= 1500) {
+        const double liveTotalMs =
+            (static_cast<double>(elapsedMs) * 100.0) / static_cast<double>(percent);
+        double blendedTotalMs = liveTotalMs;
+        if (hasHistoricalEstimate) {
+            // History is most useful at startup. This run's observed speed
+            // gradually becomes authoritative as progress accumulates.
+            const double liveWeight = qBound(
+                0.15,
+                static_cast<double>(percent - 5) / 55.0,
+                0.90);
+            blendedTotalMs = static_cast<double>(predictedTotalMs) * (1.0 - liveWeight)
+                + liveTotalMs * liveWeight;
+        }
+        estimatedRemainingMs = qMax(0.0, blendedTotalMs - static_cast<double>(elapsedMs));
+    }
+
+    const qint64 estimatedRemainingSeconds = qRound64(estimatedRemainingMs / 1000.0);
     if (estimatedRemainingSeconds <= 0) {
         return text;
     }
@@ -649,6 +668,8 @@ bool MainWindow::ExportSection::runVideoExportWorkerSync(
         QString resultDetails;
         QElapsedTimer itemElapsed;
         qint64 smoothedEtaSeconds = -1;
+        const qint64 predictedTotalMs = miacode::video_export::predictedExportTotalMs(
+            miacode::video_export::exportEstimateProfileForSnapshot(snapshot));
         itemElapsed.start();
 
         const auto parseStdoutLines = [&]() {
@@ -681,7 +702,8 @@ bool MainWindow::ExportSection::runVideoExportWorkerSync(
                                 message,
                                 qBound(0, percent, 100),
                                 itemElapsed,
-                                &smoothedEtaSeconds
+                                &smoothedEtaSeconds,
+                                predictedTotalMs
                             )
                         );
                     }
@@ -801,6 +823,11 @@ bool MainWindow::ExportSection::runVideoExportWorkerSync(
             return false;
         }
 
+        if (attempt == 1) {
+            miacode::video_export::recordSuccessfulExportPerformance(
+                miacode::video_export::exportEstimateProfileForSnapshot(snapshot),
+                itemElapsed.elapsed());
+        }
         return true;
     }
 }
@@ -893,6 +920,8 @@ bool MainWindow::ExportSection::launchVideoExportWorker(const VideoExportSnapsho
     process->setProcessChannelMode(QProcess::SeparateChannels);
     owner_.videoExportWorkerProcess_ = process;
     owner_.videoExportWorkerSnapshot_ = snapshot;
+    owner_.videoExportWorkerPredictedTotalMs_ = miacode::video_export::predictedExportTotalMs(
+        miacode::video_export::exportEstimateProfileForSnapshot(snapshot));
     owner_.videoExportWorkerJobId_ = snapshot.jobId;
     owner_.videoExportWorkerOutputPath_ = snapshot.outputPath;
     owner_.videoExportWorkerExportLogPath_ = videoExportWorkerLogPathForUi(snapshot);
@@ -1048,7 +1077,8 @@ void MainWindow::ExportSection::handleVideoExportWorkerEvent(const QJsonObject& 
             rawMessage,
             owner_.videoExportWorkerLastProgressPercent_,
             owner_.videoExportWorkerElapsed_,
-            &owner_.videoExportWorkerLastEtaSeconds_
+            &owner_.videoExportWorkerLastEtaSeconds_,
+            owner_.videoExportWorkerPredictedTotalMs_
         );
         if (owner_.videoExportProgressDialog_ != nullptr) {
             if (busyStage) {
@@ -1255,6 +1285,14 @@ void MainWindow::ExportSection::handleVideoExportWorkerProcessFinished(int exitC
         );
     }
 
+    if (owner_.videoExportWorkerSuccess_
+        && owner_.videoExportWorkerAttempt_ == 1
+        && owner_.videoExportWorkerElapsed_.isValid()) {
+        miacode::video_export::recordSuccessfulExportPerformance(
+            miacode::video_export::exportEstimateProfileForSnapshot(owner_.videoExportWorkerSnapshot_),
+            owner_.videoExportWorkerElapsed_.elapsed());
+    }
+
     if (owner_.videoExportWorkerSuccess_) {
         const QFileInfo resolvedOutputInfo(owner_.videoExportWorkerOutputPath_);
         const QString resolvedOutputName = resolvedOutputInfo.fileName().trimmed().isEmpty()
@@ -1415,6 +1453,7 @@ void MainWindow::ExportSection::clearVideoExportWorkerState()
     owner_.videoExportWorkerResultDetails_.clear();
     owner_.videoExportWorkerFirstCrashDiagnostics_.clear();
     owner_.videoExportWorkerElapsed_.invalidate();
+    owner_.videoExportWorkerPredictedTotalMs_ = -1;
     owner_.videoExportWorkerSuccess_ = false;
     owner_.videoExportWorkerCompletionReceived_ = false;
     owner_.videoExportWorkerCancelRequested_ = false;

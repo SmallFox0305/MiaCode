@@ -9,7 +9,7 @@ set(MIACODE_VERSION_PATCH "0")
 # split MIACODE_VERSION_PRERELEASE / MIACODE_DISPLAY_PRERELEASE pair —
 # they always drifted apart in practice (e.g. beta20 zip shipping with
 # beta19 in the About dialog because only one variable got bumped).
-set(MIACODE_VERSION_PRERELEASE "alpha.18")
+set(MIACODE_VERSION_PRERELEASE "alpha.19")
 set(MIACODE_BUILD_LAYOUT_REVISION "2026-04-21-first-unification")
 set(MIACODE_VERSION "${MIACODE_VERSION_MAJOR}.${MIACODE_VERSION_MINOR}.${MIACODE_VERSION_PATCH}")
 set(MIACODE_VERSION_STRING "${MIACODE_VERSION}")
@@ -343,6 +343,8 @@ add_executable(MiaCode WIN32 MACOSX_BUNDLE
     src/tools/video_export/VideoExportMediaTimeline.cpp
     src/tools/video_export/VideoExportRuntimePolicy.h
     src/tools/video_export/VideoExportRuntimePolicy.cpp
+    src/tools/video_export/VideoExportEstimateHistory.h
+    src/tools/video_export/VideoExportEstimateHistory.cpp
     src/tools/video_export/VideoExportQuickRenderBackend.h
     src/tools/video_export/VideoExportQuickRenderBackend.cpp
     src/tools/video_export/IntroPreviewWidget.h
@@ -1977,6 +1979,18 @@ if (MIACODE_BUILD_DEV_TOOLS)
             src/tools/video_export/VideoExportRuntimePolicy.cpp
         LIBS Qt6::Core
         INCLUDES src src/tools
+    )
+
+    miacode_add_dev_tool(video_export_estimate_history_spec TEST
+        SOURCES
+            src/tools/video_export/VideoExportEstimateHistorySpec.cpp
+            src/tools/video_export/VideoExportEstimateHistory.h
+            src/tools/video_export/VideoExportEstimateHistory.cpp
+            src/tools/video_export/VideoExportSnapshot.h
+            src/tools/video_export/VideoExportController.h
+            src/timeline/TimelineData.h
+        LIBS Qt6::Core Qt6::Gui
+        INCLUDES src src/common src/audio src/core/video src/timeline src/tools src/tools/video_export
     )
 
     miacode_add_dev_tool(batch_export_panel_spec TEST

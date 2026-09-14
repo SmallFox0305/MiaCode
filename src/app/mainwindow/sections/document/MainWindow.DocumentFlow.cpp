@@ -537,6 +537,10 @@ void MainWindow::addRecentFilePath(const QString& path)
         recentFilePaths_.removeLast();
     }
     savePortableState();
+    if (recentFilesMenu_ != nullptr) {
+        recentFilesMenu_->setEnabled(true);
+        refreshRecentFilesMenu(recentFilesMenu_);
+    }
 }
 
 void MainWindow::openRecentFilePath(const QString& path)

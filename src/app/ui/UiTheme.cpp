@@ -713,6 +713,34 @@ QString latencyDetectionPageStyleSheet()
         "QFrame#LatencyCard QAbstractSpinBox:focus {"
         " border-color: %5;"
         "}"
+        "QFrame#LatencyFineTuneGroup {"
+        " background: %7;"
+        " border: 1px solid %8;"
+        " border-radius: 6px;"
+        "}"
+        "QToolButton#LatencyFineTuneButton {"
+        " color: %3;"
+        " background: transparent;"
+        " border: none;"
+        " padding: 0;"
+        "}"
+        "QToolButton#LatencyFineTuneButton[fineEdge=\"top\"] {"
+        " border-bottom: 1px solid %8;"
+        " border-top-left-radius: 5px;"
+        " border-top-right-radius: 5px;"
+        "}"
+        "QToolButton#LatencyFineTuneButton[fineEdge=\"bottom\"] {"
+        " border-bottom-left-radius: 5px;"
+        " border-bottom-right-radius: 5px;"
+        "}"
+        "QToolButton#LatencyFineTuneButton:hover {"
+        " background: %11;"
+        " color: %5;"
+        "}"
+        "QToolButton#LatencyFineTuneButton:pressed {"
+        " background: %12;"
+        " color: %10;"
+        "}"
         "QFrame#LatencyCard QComboBox {"
         " background: %7;"
         " color: %3;"
@@ -778,7 +806,8 @@ QString latencyDetectionPageStyleSheet()
         .arg(css(c.borderSoft))
         .arg(css(c.selection))
         .arg(css(c.selectionText))
-        .arg(css(c.menuHoverBg));
+        .arg(css(c.menuHoverBg))
+        .arg(css(c.accentPressed));
 }
 
 QString exportLauncherPageStyleSheet()

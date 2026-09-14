@@ -1482,7 +1482,7 @@ void MainWindow::PreferencesSection::onPreferences()
     auto* backgroundImageLabel =
         new QLabel(UiText::text(QStringLiteral("dialog.preferences.background.image")), backgroundGroup);
     auto* backgroundImageRow = new QWidget(backgroundGroup);
-    auto* backgroundImageRowLayout = new QVBoxLayout(backgroundImageRow);
+    auto* backgroundImageRowLayout = new QHBoxLayout(backgroundImageRow);
     backgroundImageRowLayout->setContentsMargins(0, 0, 0, 0);
     backgroundImageRowLayout->setSpacing(8);
     auto* backgroundImageEdit = new QLineEdit(backgroundImageRow);
@@ -1490,23 +1490,17 @@ void MainWindow::PreferencesSection::onPreferences()
     backgroundImageEdit->setText(selectedBackgroundSettings.imagePath);
     backgroundImageEdit->setMinimumWidth(0);
     backgroundImageEdit->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
-    auto* backgroundImageButtonRow = new QWidget(backgroundImageRow);
-    auto* backgroundImageButtonLayout = new QHBoxLayout(backgroundImageButtonRow);
-    backgroundImageButtonLayout->setContentsMargins(0, 0, 0, 0);
-    backgroundImageButtonLayout->setSpacing(8);
     auto* chooseBackgroundButton = miacode::ui::createDialogPushButton(
         UiText::text(QStringLiteral("dialog.preferences.background.choose")),
-        backgroundImageButtonRow);
+        backgroundImageRow);
     auto* clearBackgroundButton = miacode::ui::createDialogPushButton(
         UiText::text(QStringLiteral("dialog.preferences.background.clear")),
-        backgroundImageButtonRow);
+        backgroundImageRow);
     styleRegisteredDialogButton(chooseBackgroundButton);
     styleRegisteredDialogButton(clearBackgroundButton);
-    backgroundImageButtonLayout->addWidget(chooseBackgroundButton, 0);
-    backgroundImageButtonLayout->addWidget(clearBackgroundButton, 0);
-    backgroundImageButtonLayout->addStretch(1);
-    backgroundImageRowLayout->addWidget(backgroundImageEdit);
-    backgroundImageRowLayout->addWidget(backgroundImageButtonRow);
+    backgroundImageRowLayout->addWidget(backgroundImageEdit, 1);
+    backgroundImageRowLayout->addWidget(chooseBackgroundButton, 0);
+    backgroundImageRowLayout->addWidget(clearBackgroundButton, 0);
     connect(chooseBackgroundButton, &QPushButton::clicked, &dialog, [&]() {
         const QString initialDir = selectedBackgroundSettings.imagePath.isEmpty()
             ? QString()
@@ -1721,7 +1715,8 @@ void MainWindow::PreferencesSection::onPreferences()
     backgroundOverlayRowLayout->addWidget(backgroundOverlayButton, 0);
     backgroundOverlayRowLayout->addStretch(1);
     connect(backgroundOverlayButton, &QPushButton::clicked, &dialog, openBackgroundOverlayDialog);
-    backgroundLayout->addRow(backgroundOverlayLabel, backgroundOverlayRow);
+    backgroundLayout->addRow(backgroundOverlayLabel);
+    backgroundLayout->addRow(backgroundOverlayRow);
 
     auto* backgroundScaleCombo =
         miacode::ui::createDialogComboBox(backgroundGroup, 12, Qt::AlignLeft | Qt::AlignVCenter);
