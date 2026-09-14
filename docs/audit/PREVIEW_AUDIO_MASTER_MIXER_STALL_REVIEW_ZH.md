@@ -354,3 +354,26 @@ lifecycle: working
 从 v1 到 v2，最重要的行为变化不是 BGM 文件读取：v1 已经使用内存解码流、BASS_FX tempo、零 master buffer 和 8 个 mixer 线程。v2 期间先加入 macOS BASS 后端，再把 SFX 从 GUI 墙钟排程改成 master mixer sync，随后把 backend/BASS 操作迁移到 worker，并加入进程级设备租约与 hotplug barrier。这些变化增加了时钟、回调、生命周期之间的耦合和对调度抖动的敏感度，但不能单独解释本轮 `BUFFER_MS≠0` 的回归。最直接的回归来自 `a9a95856`：把 master buffer 改成非零，同时没有调整默认 100 ms update period，并叠加了 SFX buffer 补偿与回调路径改造；`d3c50201` 仅将线程数改回 4，`7a7109e4` 才移除了已确认的正 buffer 触发因素。
 
 最后，`0/4` 仍不是“已经听感验收通过”的结论。既有日志还表明旧 `0/8` 零缓冲路径存在独立的短时欠载风险；下一次用户 A/B 应只比较 `0/4` 与 `0/8`，并同时看 `late_callback` 离群值。只有在 master/device 位置、BGM 产出位置和设备回调节奏被分别记录后，才能最终区分 BGM 单独欠供与整个 master/device 停顿。
+
+### 7.9 A7 落地：SFX 调度链的"死 sync"根因实测与自愈重构（2026-09-14）
+
+用户反馈（其他用户在 `99a646e7` 之后仍复现）："切换音频设备 / 长时间不播放后回来 / 随机偶发"时 SFX 丢失、BGM 正常、必须手动暂停再播放才恢复。本轮先用独立探针程序（链接工程自带的 `libbass 2.4.18` / `libbassmix 2.4.13`，master mixer 与生产配置一致：float 立体声、`NONSTOP|POSEX`、`BUFFER=0`、4 线程）逐条实测了调度链依赖的 BASS 语义，再据此重构。
+
+**实测结论（决定修法的事实）：**
+
+- `POS|MIXTIME|ONETIME` sync 的目标位置**等于**当前 decode 游标时，永远不触发；落后于游标时同样永远不触发；领先 **1 个采样**即可在该采样精确触发（回调内 `GetPosition == target`，误差 0）。
+- 在 sync 回调内部 arm 下一个 sync，即使目标落在**当前正在混音的 block 内**（间隔小到 1 个采样）也会触发；40 条链、间隔 1 采样～100 ms 全部无丢失；回调内故意停顿 5/15/40 ms，链依然完整。
+- master 位置为 64 位：解码 mixer 拉过 2^32 字节边界后 sync 照常触发、位置单调；playback mixer 不接受 `BASS_ChannelSetPosition`（`NOTAVAIL`）。"运行约 3 小时后位置回绕"假说被排除。
+- SFX 音源路径（memory 解码流 → NONSTOP 重采样 mixer → master）在 worker 线程和 sync 回调内反复 `Mixer_ChannelSetPosition(0)+清 PAUSE` 重触发、重叠触发、空闲 20 s 后触发、`stop()` 后触发、多源并存等情况下每次都有输出能量，无 API 失败。音源层不是丢音效的位置。
+- 田野日志（`~/Desktop/Files/logs*`，全部为 8 月 Windows 抓取）没有任何一次符合"链死亡"签名的会话；这些日志早于 `99a646e7`，且当时的 `bass_status` 缺少读出链状态所需的字段。
+
+因此调度链**唯一**的死亡方式就是 A7 描述的"把 sync arm 在游标当前或之后的位置"，而工程中有三个入口会这样做：`anchorSfxScheduler` 在锁外读位置再在锁内 arm（中间可被混音线程推进一个 block）；`mixerSecondForChartSecond` 减去输出缓冲后被 `qMax(0.0, …)` 钳到锚点位置（`a9a95856`～`7a7109e4` 之间 30 ms 默认缓冲时，锚点后 30 ms 内的每一组都命中；缓冲为 0 时只剩 1 个采样内的舍入带）；deferred 回放或 watchdog 迟到后 arm 的下一组已落后游标。`99a646e7` 的 200 ms grace 恢复能自愈，但每次恢复丢掉 grace 内的所有组并重新取锚（引入漂移），密集段落里会连锁成"只剩零星音效"的听感。
+
+**本轮改动（`src/audio/BassPreviewAudioBackend_EventDrain.cpp` 等）：**
+
+- 每个 arm 点在 `BASS_ChannelSetSync` 之后立即用 `armedSyncCannotFire(target, decode)` 复核；命中则**当场播放该组**（≤150 ms 迟到）或跳过（更晚），并继续 arm 下一组，单次最多 8 组；死 handle 在锁外移除（回调线程通过原子槽交给 worker）。锚点的位置读取移到锁内、紧贴 arm。
+- watchdog（每个 `DrainEvents`/`SyncBackgroundTrack` 与 1 Hz health tick）：armed 目标落后游标超过 20 ms（原 200 ms）→ 当场播放/跳过并从**现有锚点**重新 arm，不再移动锚点；"active 但无 armed 且仍有组"→ 直接 arm 并记 `reason=nothing_armed`；调度时钟与 GUI 谱面秒相差 >1 s 且连续 3 tick → 记 `reason=clock_divergence` 并按 GUI 秒重新取锚（兜底，覆盖任何链外的 mixer 时钟不连续，如设备重初始化）。
+- `lastAuthoritativeSecond` 在整个 live 会话中都是会话起点（worker 不派发 `syncPreviewPlaybackClockTransaction`），`applyLevels`/`configureTimeline`/`pauseBackgroundTrack` 改用 `liveChartSecondEstimate()`（调度时钟 → 最近 GUI tick 秒 → 快照），避免在调度器失活时把游标倒回起点；`pauseBackgroundTrack` 在 transport 仍运行时重新取锚。
+- 日志：`bass_status` 新增 `sched_active/sched_chart/sched_delta_ms/decode_pos/armed_sync/armed_lead_ms/next_due_ms/deferred_sync/last_trigger_age_ms` 与累计计数；`bass_sfx_mixer_trigger` 新增 `late_us/inline/source`；`action=anchor` 新增 `decode_pos/armed_*`；`action=disarm` 带计数；`action=recover reason=missed_sync|nothing_armed|deferred_sync_late|clock_divergence`；`action=skip reason=sync_dead_on_arm`。读法见 `docs/ops/DEBUG_INDEX.md`。
+
+**下次复现时的定位顺序：** 取 SFX 消失区间的 `bass_status`：`master_running=1 && sched_active=1 && next_due_ms` 持续为负且 `last_trigger_age_ms` 持续增长 ⇒ 链死亡（看 `armed_lead_ms` 正负与 `armed_sync` 是否为 0，再对照最近的 `recover`/`skip` 行）；`sched_active=0` ⇒ 看最近的 `deactivated`/`disarm` 行是谁关掉了调度器；链正常但 `played=(none)` 或 `bass_err` ⇒ 音源层；链和音源都正常 ⇒ 问题在 backend 之外（timeline 组内容、UI 静音、设备）。

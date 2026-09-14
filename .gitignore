@@ -155,6 +155,7 @@ scripts/debug/*
 !scripts/debug/Start_MiaCode_IdleFreezeRepro.ps1
 !scripts/debug/Start_MiaCode_QtPluginDiag.bat
 !scripts/debug/Start_MiaCode_SoftwareVideoDecode.bat
+!scripts/debug/bass_sync_probe/
 !scripts/ffmpeg/
 scripts/ffmpeg/*
 !scripts/ffmpeg/ensure-macos-ffmpeg.sh

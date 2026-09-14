@@ -287,8 +287,7 @@ void BassPreviewAudioBackend::applyLevels(const PreviewAudioSettings& settings)
     MC_OP("BassPreviewAudioBackend::applyLevels");
     const bool rebuildMineSfx = settings_.mineSfxEnabled != settings.mineSfxEnabled;
     const bool rearmScheduler = playbackSession_.masterRunning;
-    const double liveChartSecond = currentSfxSchedulerChartSecond(
-        playbackSession_.lastAuthoritativeSecond);
+    const double liveChartSecond = liveChartSecondEstimate();
     // The mixer callback can read a group concurrently with the GUI applying a
     // setting. Remove its one outstanding sync before reading or rebuilding the
     // event vector, then resume from the same fired/unfired boundary.
@@ -391,8 +390,7 @@ void BassPreviewAudioBackend::configureTimeline(
 {
     MC_OP("BassPreviewAudioBackend::configureTimeline");
     const bool rearmScheduler = playbackSession_.masterRunning;
-    const double liveChartSecond = currentSfxSchedulerChartSecond(
-        playbackSession_.lastAuthoritativeSecond);
+    const double liveChartSecond = liveChartSecondEstimate();
     if (rearmScheduler) {
         disarmSfxScheduler("configure_timeline");
     }

@@ -594,6 +594,7 @@ bool BassPreviewAudioBackend::initializeAudioEngine()
             true);
         return false;
     }
+    masterMixerBytesPerSecond_ = static_cast<double>(BASS_ChannelSeconds2Bytes(masterMixer_, 1.0));
     const miacode::preview_audio::bass::MasterMixerPolicy mixerPolicy =
         miacode::preview_audio::bass::masterMixerPolicyFromOverrides(
             qEnvironmentVariable("MIACODE_BASS_MASTER_BUFFER_MS"),
@@ -630,6 +631,7 @@ bool BassPreviewAudioBackend::initializeAudioEngine()
         BASS_StreamFree(masterMixer_);
         masterMixer_ = 0;
         masterMixerOutputBufferSeconds_ = 0.0;
+        masterMixerBytesPerSecond_ = 0.0;
         bassDeviceLease_.release();
         appendBassDebugLog(
             miacode::preview_audio::bass::BassDebugOperation::InitializeAudioEngine,
@@ -711,6 +713,7 @@ void BassPreviewAudioBackend::invalidateOutputDevice()
         }
         masterMixer_ = 0;
         masterMixerOutputBufferSeconds_ = 0.0;
+        masterMixerBytesPerSecond_ = 0.0;
     }
     unloadOptionalPlugins();
     bassDeviceLease_.release();

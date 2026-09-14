@@ -20,7 +20,9 @@
 #include <QFileInfo>
 #include <QtMath>
 
+#include <chrono>
 #include <cstdio>   // G1 Commit 8 followup: std::snprintf for startup-beacon lines
+#include <limits>
 
 #ifdef MIACODE_HAS_BASS_AUDIO
 #include "bass.h"
@@ -279,7 +281,7 @@ miacode::preview_audio::PreviewAudioHealthSample BassPreviewAudioBackend::sample
     // rather than after the early-return below.
     if (engineInitialized_) {
         drainOutputGlitchEvents();
-        serviceSfxScheduler();
+        serviceSfxScheduler(0.0, false);
     }
     if (!engineInitialized_ || !audioHealthPlaybackRunning_.load(std::memory_order_acquire)) {
         // A2: this used to return before latestHealthSample_ was ever assigned below, so
@@ -388,6 +390,21 @@ void BassPreviewAudioBackend::logPlaybackStatus(double authoritativeSecond, doub
     bool masterRunning = false;
     int armedGroupIndex = -1;
     QString armedActionLabel;
+    // Chain-health fields. `sched_chart` is the scheduler's own clock (anchor + master decode
+    // cursor) and `next_due_ms` how far the next group is from it: a live session whose
+    // `next_due_ms` goes strongly negative while `last_trigger_age_ms` keeps growing has a
+    // dead chain, and `armed_lead_ms` (target minus cursor) says whether the armed sync is
+    // ahead (healthy), behind (never fires), or absent. The decode cursor is read before the
+    // lock so no BASS call happens under schedulerMutex_.
+    bool schedulerActive = false;
+    double schedulerChartSecond = std::numeric_limits<double>::quiet_NaN();
+    quint32 armedSync = 0;
+    quint64 armedTargetPosition = 0;
+    quint32 deferredHandle = 0;
+    ScheduledMixerAction armedAction = ScheduledMixerAction::None;
+    const QWORD decodePosition = masterMixer_ != 0
+        ? BASS_ChannelGetPosition(masterMixer_, BASS_POS_BYTE | BASS_POS_DECODE)
+        : static_cast<QWORD>(-1);
     // The latest sample was produced by PreviewAudioWorker before this status row. Nothing
     // here calls BASS under schedulerMutex_.
     const miacode::preview_audio::PreviewAudioHealthSample healthSample = latestHealthSample_;
@@ -436,11 +453,31 @@ void BassPreviewAudioBackend::logPlaybackStatus(double authoritativeSecond, doub
         backgroundTrackPendingStart = playbackSession_.backgroundTrackPendingStart;
         masterRunning = playbackSession_.masterRunning;
         armedGroupIndex = scheduledGroupIndex_;
+        armedAction = scheduledMixerAction_;
         armedActionLabel = scheduledMixerActionLabel(scheduledMixerAction_);
+        schedulerActive = sfxSchedulerActive_;
+        schedulerChartSecond = chartSecondForDecodePositionLocked(decodePosition);
+        armedSync = scheduledGroupSync_;
+        armedTargetPosition = scheduledGroupTargetPosition_;
+        deferredHandle = deferredMixerSyncHandle_.load(std::memory_order_acquire);
     }
     const double driftMs = (authoritativeSecond - fallbackSecond) * 1000.0;
+    const double schedulerDeltaMs = qIsFinite(schedulerChartSecond)
+        ? (schedulerChartSecond - authoritativeSecond) * 1000.0
+        : std::numeric_limits<double>::quiet_NaN();
+    const double armedLeadMs = armedSync != 0
+        ? scheduledGroupSyncLeadMs(armedTargetPosition, decodePosition, armedAction)
+        : std::numeric_limits<double>::quiet_NaN();
+    const double nextDueMs = qIsFinite(schedulerChartSecond) && nextGroupSecond >= 0.0
+        ? (nextGroupSecond - schedulerChartSecond) / qMax(kBassPreviewMinRate, backgroundTrackPlaybackRate) * 1000.0
+        : std::numeric_limits<double>::quiet_NaN();
+    const qint64 lastTriggerNs = sfxLastTriggerMonotonicNs_.load(std::memory_order_relaxed);
+    const double lastTriggerAgeMs = lastTriggerNs > 0
+        ? static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+              std::chrono::steady_clock::now().time_since_epoch()).count() - lastTriggerNs) / 1.0e6
+        : -1.0;
     appendAudioDebugLog(
-        QString("bass_status txn=%1 auth=%2 mixer=%3 bgm_raw=%4 bgm_chart=%5 fallback=%6 drift_ms=%7 next_group_idx=%8 next_group_second=%9 last_trigger_idx=%10 last_trigger_second=%11 triggered_count=%12 rate=%13 speed_mode=%14 bgm_delta_ms=%15 bgm_raw_expected=%16 bgm_raw_delta_ms=%17 bgm_offset=%18 bgm_len=%19 bgm_running=%20 bgm_pending=%21 master_running=%22 retained_mode=%23 status_interval_ms=%24 armed_group_idx=%25 armed_action=%26 bgm_raw_age_ms=%27")
+        QString("bass_status txn=%1 auth=%2 mixer=%3 bgm_raw=%4 bgm_chart=%5 fallback=%6 drift_ms=%7 next_group_idx=%8 next_group_second=%9 last_trigger_idx=%10 last_trigger_second=%11 triggered_count=%12 rate=%13 speed_mode=%14 bgm_delta_ms=%15 bgm_raw_expected=%16 bgm_raw_delta_ms=%17 bgm_offset=%18 bgm_len=%19 bgm_running=%20 bgm_pending=%21 master_running=%22 retained_mode=%23 status_interval_ms=%24 armed_group_idx=%25 armed_action=%26 bgm_raw_age_ms=%27 sched_active=%28 sched_chart=%29 sched_delta_ms=%30 decode_pos=%31 armed_sync=%32 armed_lead_ms=%33 next_due_ms=%34 deferred_sync=%35 last_trigger_age_ms=%36 inline=%37 skipped=%38 watchdog=%39 deferred_count=%40")
             .arg(playbackTransactionId_)
             .arg(authoritativeSecond, 0, 'f', 6)
             .arg(mixerSecond, 0, 'f', 6)
@@ -467,7 +504,20 @@ void BassPreviewAudioBackend::logPlaybackStatus(double authoritativeSecond, doub
             .arg(statusLogIntervalSeconds * 1000.0, 0, 'f', 3)
             .arg(armedGroupIndex)
             .arg(armedActionLabel)
-            .arg(bgmRawAgeMs));
+            .arg(bgmRawAgeMs)
+            .arg(schedulerActive ? 1 : 0)
+            .arg(schedulerChartSecond, 0, 'f', 6)
+            .arg(schedulerDeltaMs, 0, 'f', 1)
+            .arg(decodePosition == static_cast<QWORD>(-1) ? -1 : static_cast<qint64>(decodePosition))
+            .arg(armedSync)
+            .arg(armedLeadMs, 0, 'f', 1)
+            .arg(nextDueMs, 0, 'f', 1)
+            .arg(deferredHandle)
+            .arg(lastTriggerAgeMs, 0, 'f', 0)
+            .arg(sfxInlineTriggerCount_.load(std::memory_order_relaxed))
+            .arg(sfxInlineSkipCount_.load(std::memory_order_relaxed))
+            .arg(sfxWatchdogRecoveryCount_.load(std::memory_order_relaxed))
+            .arg(sfxDeferredSyncCount_.load(std::memory_order_relaxed)));
 #else
     Q_UNUSED(authoritativeSecond);
     Q_UNUSED(fallbackSecond);
@@ -887,7 +937,7 @@ double BassPreviewAudioBackend::syncPreviewPlaybackClockTransaction(double fallb
     }
     // Non-GUI tools only: the worker never dispatches this method, which is why the
     // scheduler upkeep also runs from drainEvents()/syncBackgroundTrack()/sampleHealth().
-    serviceSfxScheduler();
+    serviceSfxScheduler(fallbackSecond, false);
     logTrackFileMissingAfterLoadIfNeeded();
     const double second = authoritativeSecond();
     playbackSession_.lastAuthoritativeSecond = second;

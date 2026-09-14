@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <memory>
 
@@ -131,6 +132,10 @@ private:
         double sessionStartSecond = 0.0;
         double sessionPlaybackRate = 1.0;
         double lastAuthoritativeSecond = 0.0;
+        // Chart second of the most recent GUI tick (drainEvents / syncBackgroundTrack) while
+        // the transport was running; -1 outside a live session. The only live clock the
+        // backend receives from outside once playback is under way.
+        double lastTickSecond = -1.0;
         double lastStatusLogSecond = -1.0;
         // Underrun / buffer-health probe state. Separate from lastStatusLogSecond so the
         // (much coarser) health cadence and the ~1 Hz bass_status cadence stay independent.
@@ -194,19 +199,74 @@ private:
     void disarmSfxScheduler(const char* reason);
     void anchorSfxScheduler(double chartSecond);
     double currentSfxSchedulerChartSecond(double fallbackSecond) const;
-    void armNextGroupSyncLocked();
+    // Chart second for a master decode position under the current anchor; only meaningful
+    // while sfxSchedulerActive_. Must be called with schedulerMutex_ held.
+    double chartSecondForDecodePositionLocked(quint64 decodePosition) const;
+    // Best available live chart second for re-anchoring: the scheduler's own clock while it
+    // is active, else the last chart second the GUI ticked while the transport ran, else the
+    // transport snapshot. lastAuthoritativeSecond alone is the session start for the whole
+    // of a live session (the worker never dispatches syncPreviewPlaybackClockTransaction),
+    // so using it directly would rewind the SFX cursor to the start after an inactive
+    // scheduler met a settings change.
+    double liveChartSecondEstimate() const;
+    // Moves only the event-group cursor past `second`; leaves the anchor and any armed sync
+    // alone. Must be called with schedulerMutex_ held.
+    void advanceCursorPastSecondLocked(double second);
+
+    // Everything one arm pass produces besides the armed sync itself. Both threads that arm
+    // (the worker and the BASS mixer callback) fill this on their own stack and hand the
+    // contents to the log / to BASS_ChannelRemoveSync only once schedulerMutex_ is gone.
+    struct SfxArmContext {
+        miacode::preview_audio::bass::SfxArmSource source =
+            miacode::preview_audio::bass::SfxArmSource::Callback;
+        // Dead syncs (armed at or behind the cursor) that still sit in BASS's sync list.
+        std::array<quint32, miacode::preview_audio::bass::kMaxInlineCatchUpGroups> staleHandles{};
+        int staleCount = 0;
+        // Groups played (or skipped) inline because their sync could never have fired.
+        std::array<miacode::preview_audio::bass::SfxCallbackEvent,
+            miacode::preview_audio::bass::kMaxInlineCatchUpGroups> events{};
+        int eventCount = 0;
+        int inlineTriggers = 0;
+        int inlineSkips = 0;
+    };
+    // Arms the next group / pending-BGM sync and verifies it against the live decode cursor:
+    // a target the cursor has already reached can never fire (see
+    // BassPreviewSfxSchedulerPolicy.h), so that group is played inline and the pass moves on
+    // to the following group, bounded by kMaxInlineCatchUpGroups. Must be called with
+    // schedulerMutex_ held.
+    void armNextGroupSyncLocked(SfxArmContext& context);
+    // The action a fired (or dead) sync stands for: start the pending BGM and/or play the
+    // group, advance the cursor, and describe it in `event`. Must be called with
+    // schedulerMutex_ held.
+    void performScheduledActionLocked(
+        int groupIndex,
+        ScheduledMixerAction action,
+        miacode::preview_audio::bass::SfxCallbackEvent* event);
     void processMixerGroupSyncLocked(
         quint32 handle,
         bool processedAfterContention,
-        miacode::preview_audio::bass::SfxCallbackEvent* event);
+        miacode::preview_audio::bass::SfxCallbackEvent* event,
+        SfxArmContext& context);
+    // Worker side of an arm pass: removes dead syncs and logs inline events. Must be called
+    // with schedulerMutex_ released.
+    void finishArmContext(const SfxArmContext& context);
+    // Mixer-callback side: dead syncs go to the stale slots for the worker to remove, inline
+    // events go to the diagnostic ring.
+    void publishArmContextFromCallback(const SfxArmContext& context);
+    void pushStaleSyncHandle(quint32 handle);
+    void drainStaleSyncHandles();
     void drainDeferredMixerSync();
     void drainSfxCallbackEvents();
-    // Re-anchors when the armed sync's target is already behind the decode cursor.
-    void recoverMissedSfxSync();
-    // Worker-side upkeep for the callback-driven chain: callback diagnostics, a deferred
-    // sync, a missed sync. Runs from the commands PreviewAudioWorker executes on every
-    // playback tick and from its health tick.
-    void serviceSfxScheduler();
+    // The chain watchdog: an armed sync the cursor is past (dead), an active scheduler with
+    // nothing armed while groups remain, or a decode<->chart mapping that drifted a full
+    // second from the GUI's chart second. The first two are repaired in place (late groups
+    // played inline, the next one re-armed from the existing anchor); the last re-anchors.
+    void runSfxChainWatchdog(double referenceChartSecond, bool hasReference);
+    // Worker-side upkeep for the callback-driven chain: callback diagnostics, dead-sync
+    // removal, a deferred sync, the watchdog. Runs from the commands PreviewAudioWorker
+    // executes on every playback tick (with the GUI's chart second as reference) and from
+    // its health tick (without one).
+    void serviceSfxScheduler(double referenceChartSecond, bool hasReference);
     void logSfxCallbackEvent(
         const miacode::preview_audio::bass::SfxCallbackEvent& event) const;
     // Must be called with schedulerMutex_ released.
@@ -296,6 +356,21 @@ private:
     int lastNativeErrorCode_ = 0;
     quint32 masterMixer_ = 0;
     double masterMixerOutputBufferSeconds_ = 0.0;
+    // Byte rate of masterMixer_'s format (BASS_ChannelSeconds2Bytes(mixer, 1.0)), so the
+    // scheduler can convert cursor distances to seconds with plain arithmetic while it
+    // holds schedulerMutex_ or runs on the mixer thread, instead of calling back into BASS.
+    double masterMixerBytesPerSecond_ = 0.0;
+    double mixerBytesToSeconds(quint64 bytes) const
+    {
+        return masterMixerBytesPerSecond_ > 0.0
+            ? static_cast<double>(bytes) / masterMixerBytesPerSecond_
+            : 0.0;
+    }
+    // Signed lead (ms) of an armed sync's target over the decode cursor; 0 when nothing is armed.
+    double scheduledGroupSyncLeadMs(
+        quint64 targetPosition,
+        quint64 decodePosition,
+        ScheduledMixerAction action) const;
     // HDSP handle for the output-glitch probe attached to masterMixer_; 0 when not
     // attached. outputGlitchProbeState_ is the audio-thread-owned tracker state the DSP
     // callback mutates -- see BassPreviewOutputGlitchProbeState.h.
@@ -324,6 +399,19 @@ private:
     mutable QMutex schedulerMutex_;
     std::atomic<quint32> deferredMixerSyncHandle_{0};
     miacode::preview_audio::bass::SfxCallbackEventRing sfxCallbackEventRing_;
+    // Dead syncs discovered by the mixer callback's arm pass. They can never fire, so they
+    // only leak until the worker removes them outside schedulerMutex_; a full array simply
+    // leaks the extra handle until the master mixer is freed.
+    std::array<std::atomic<quint32>, 16> staleSyncHandles_{};
+    // Chain health counters for bass_status / disarm rows: cumulative over the backend's
+    // lifetime, so a capture can diff them across sessions.
+    std::atomic<quint64> sfxInlineTriggerCount_{0};
+    std::atomic<quint64> sfxInlineSkipCount_{0};
+    std::atomic<quint64> sfxWatchdogRecoveryCount_{0};
+    std::atomic<quint64> sfxDeferredSyncCount_{0};
+    // steady_clock ns of the last group actually triggered (any path); 0 = never.
+    std::atomic<qint64> sfxLastTriggerMonotonicNs_{0};
+    int sfxClockDivergenceStrikes_ = 0;
     quint32 scheduledGroupSync_ = 0;
     int scheduledGroupIndex_ = -1;
     ScheduledMixerAction scheduledMixerAction_ = ScheduledMixerAction::None;

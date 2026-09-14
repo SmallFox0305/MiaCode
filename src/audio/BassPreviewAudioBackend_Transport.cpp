@@ -74,6 +74,7 @@ void BassPreviewAudioBackend::suspendPlaybackTransport()
     }
     pauseTouchholdVoices();
     playbackSession_.masterRunning = false;
+    playbackSession_.lastTickSecond = -1.0;
     audioHealthPlaybackRunning_.store(false, std::memory_order_release);
     playbackSession_.backgroundTrackRunning = false;
     retainedPlaybackMode_ = RetainedPlaybackMode::PausedExact;
@@ -166,6 +167,7 @@ void BassPreviewAudioBackend::repositionMasterTransportClock(double targetSecond
     playbackSession_.lastTriggeredGroupIndex = -1;
     playbackSession_.triggeredGroupCount = 0;
     playbackSession_.masterRunning = false;
+    playbackSession_.lastTickSecond = -1.0;
     audioHealthPlaybackRunning_.store(false, std::memory_order_release);
 }
 
@@ -423,6 +425,7 @@ void BassPreviewAudioBackend::resetMasterMixerClock(double startSecond)
     playbackSession_.lastTriggeredGroupIndex = -1;
     playbackSession_.triggeredGroupCount = 0;
     playbackSession_.masterRunning = false;
+    playbackSession_.lastTickSecond = -1.0;
     audioHealthPlaybackRunning_.store(false, std::memory_order_release);
 #else
     Q_UNUSED(startSecond);
@@ -636,7 +639,10 @@ bool BassPreviewAudioBackend::maybeStartPendingBackgroundTrack(double second)
 
 void BassPreviewAudioBackend::syncBackgroundTrack(double timelineSecond)
 {
-    serviceSfxScheduler();
+    if (playbackSession_.masterRunning && qIsFinite(timelineSecond)) {
+        playbackSession_.lastTickSecond = timelineSecond;
+    }
+    serviceSfxScheduler(timelineSecond, true);
     maybeStartPendingBackgroundTrack(timelineSecond);
     // The pending BGM transition itself is handled by the mixer sync while a
     // live transport is active. This tick remains status-only.
@@ -710,12 +716,23 @@ void BassPreviewAudioBackend::seekBackgroundTrack(double second)
 void BassPreviewAudioBackend::pauseBackgroundTrack()
 {
     MC_OP("BassPreviewAudioBackend::pauseBackgroundTrack");
+    // The armed sync may be the pending-BGM start, so it is disarmed with the BGM. A
+    // transport that keeps running still owes its note sounds, so the scheduler is
+    // re-anchored at the live position; this used to leave it disarmed until the next
+    // pause or seek. (The device-change path that calls this invalidates the engine right
+    // after, which tears the re-anchor down again -- harmless.)
+    const double liveChartSecond = liveChartSecondEstimate();
     disarmSfxScheduler("pause_background_track");
 #ifdef MIACODE_HAS_BASS_AUDIO
     if (backgroundTrackSample_ != nullptr) {
         backgroundTrackSample_->pause();
     }
     playbackSession_.backgroundTrackRunning = false;
+    if (playbackSession_.masterRunning) {
+        anchorSfxScheduler(liveChartSecond);
+    }
+#else
+    Q_UNUSED(liveChartSecond);
 #endif
 }
 

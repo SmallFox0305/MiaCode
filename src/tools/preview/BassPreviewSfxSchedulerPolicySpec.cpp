@@ -160,22 +160,88 @@ int main()
         scheduledSyncWasMissed(1000, 1100, 100) && scheduledSyncWasMissed(1000, 50000, 100),
         QStringLiteral("a sync the cursor is past by the grace can no longer fire"), err);
     ok &= require(
-        kMissedSyncGraceSeconds > kDeferredSyncMaxLateSeconds,
-        QStringLiteral("a deferred sync is replayed before the missed-sync watchdog could claim it"), err);
-    ok &= require(
         shouldReplayDeferredSync(0.0) && shouldReplayDeferredSync(-0.004)
             && shouldReplayDeferredSync(kDeferredSyncMaxLateSeconds),
         QStringLiteral("a deferred sync near its note time is replayed"), err);
     ok &= require(
         !shouldReplayDeferredSync(kDeferredSyncMaxLateSeconds + 0.001)
             && !shouldReplayDeferredSync(std::numeric_limits<double>::quiet_NaN()),
-        QStringLiteral("a deferred sync from a stalled worker is dropped and re-anchored"), err);
+        QStringLiteral("a deferred sync from a stalled worker is skipped"), err);
+
+    // Measured against the bundled BASS 2.4.18 / BASSmix 2.4.13 with the production master
+    // configuration (float stereo, NONSTOP|POSEX, zero buffer, four mixer threads):
+    //   - a POS|MIXTIME|ONETIME sync armed exactly AT the current decode position never
+    //     fires; one armed one sample ahead fires at exactly that sample;
+    //   - a sync armed behind the cursor never fires;
+    //   - a sync armed from inside a sync callback fires even when its position lies in the
+    //     block currently being mixed, and chains survive 40 ms callback stalls.
+    // So the only way the chain dies is arming at or behind the cursor, and the check that
+    // decides to fire such a group inline must treat equality as dead.
+    using miacode::preview_audio::bass::armedSyncCannotFire;
+    ok &= require(
+        armedSyncCannotFire(1000, 1000) && armedSyncCannotFire(1000, 1008),
+        QStringLiteral("a sync armed at or behind the decode cursor can never fire"), err);
+    ok &= require(
+        !armedSyncCannotFire(1008, 1000),
+        QStringLiteral("a sync armed one sample ahead of the decode cursor is live"), err);
+
+    // The missed-sync grace only has to cover the one mix block in which BASS may still be
+    // dispatching a correctly armed sync (10 ms on every measured device); a 200 ms grace
+    // was a fifth of a second of silence per miss and, because the recovery re-anchored and
+    // skipped, it also dropped every group in that window.
+    ok &= require(
+        kMissedSyncGraceSeconds <= 0.050 && kMissedSyncGraceSeconds >= 0.010,
+        QStringLiteral("the missed-sync grace is a few mix blocks, not a fifth of a second"), err);
+
+    // A group the chain is late for is still played when it is close to its note time; only
+    // a group that waited out a real stall is skipped, so a recovery never releases a burst
+    // of stale note sounds and never goes silent for a group it could still have played.
+    using miacode::preview_audio::bass::LateGroupAction;
+    using miacode::preview_audio::bass::kLateGroupCatchUpSeconds;
+    using miacode::preview_audio::bass::lateGroupAction;
+    ok &= require(
+        lateGroupAction(0.0) == LateGroupAction::TriggerNow
+            && lateGroupAction(kMissedSyncGraceSeconds) == LateGroupAction::TriggerNow
+            && lateGroupAction(kLateGroupCatchUpSeconds) == LateGroupAction::TriggerNow,
+        QStringLiteral("a group within the catch-up window is triggered late rather than lost"), err);
+    ok &= require(
+        lateGroupAction(kLateGroupCatchUpSeconds + 0.001) == LateGroupAction::Skip
+            && lateGroupAction(std::numeric_limits<double>::quiet_NaN()) == LateGroupAction::Skip,
+        QStringLiteral("a group past the catch-up window is skipped"), err);
+    ok &= require(
+        kDeferredSyncMaxLateSeconds == kLateGroupCatchUpSeconds,
+        QStringLiteral("deferred replay and inline catch-up share one lateness window"), err);
+
+    // The scheduler's own clock (anchor + master decode cursor) is compared with the chart
+    // second the GUI passes on every tick. A divergence beyond one second, persisting over
+    // consecutive ticks, means the decode<->chart mapping is broken by something the chain
+    // cannot see (a device re-initialisation, a position discontinuity) and the session is
+    // re-anchored to the reference instead of staying silent until a manual pause.
+    using miacode::preview_audio::bass::chainClockDiverged;
+    using miacode::preview_audio::bass::kChainClockDivergenceSeconds;
+    using miacode::preview_audio::bass::kChainClockDivergenceStrikes;
+    ok &= require(
+        !chainClockDiverged(10.0, 10.2) && !chainClockDiverged(10.0, 9.5),
+        QStringLiteral("ordinary stall drift between the mixer clock and the wall clock is tolerated"), err);
+    ok &= require(
+        chainClockDiverged(10.0, 10.0 + kChainClockDivergenceSeconds + 0.01)
+            && chainClockDiverged(10.0 + kChainClockDivergenceSeconds + 0.01, 10.0),
+        QStringLiteral("a divergence beyond the threshold in either direction is flagged"), err);
+    ok &= require(
+        !chainClockDiverged(std::numeric_limits<double>::quiet_NaN(), 10.0)
+            && !chainClockDiverged(10.0, std::numeric_limits<double>::infinity()),
+        QStringLiteral("a non-finite clock never triggers a re-anchor"), err);
+    ok &= require(
+        kChainClockDivergenceStrikes >= 2,
+        QStringLiteral("a single divergent tick is never acted on"), err);
 
     // A mixer callback that loses tryLock() hands its fired sync to the worker. That hand-off
     // is only real if something the worker executes during playback services it: the
     // backend's own clock-sync method is not dispatched by PreviewAudioWorker at all, so a
     // drain placed only there strands the scheduler and silences every later note sound
-    // until a pause or seek re-anchors it.
+    // until a pause or seek re-anchors it. The same worker tick runs the chain watchdog,
+    // which is what turns every remaining way for the chain to die into a logged, bounded
+    // late trigger instead of silence.
     const QString eventDrain = readSource(QStringLiteral("src/audio/BassPreviewAudioBackend_EventDrain.cpp"));
     const QString transport = readSource(QStringLiteral("src/audio/BassPreviewAudioBackend_Transport.cpp"));
     const QString playbackClock = readSource(QStringLiteral("src/audio/BassPreviewAudioBackend_PlaybackClock.cpp"));
@@ -184,19 +250,29 @@ int main()
         !eventDrain.isEmpty() && !transport.isEmpty() && !playbackClock.isEmpty() && !worker.isEmpty(),
         QStringLiteral("backend and worker sources are readable from MIACODE_SOURCE_ROOT"), err);
     const QString service = functionBody(
-        eventDrain, QStringLiteral("void BassPreviewAudioBackend::serviceSfxScheduler()"));
+        eventDrain,
+        QStringLiteral("void BassPreviewAudioBackend::serviceSfxScheduler(double referenceChartSecond, bool hasReference)"));
     ok &= require(
         service.contains(QStringLiteral("drainDeferredMixerSync();"))
-            && service.contains(QStringLiteral("recoverMissedSfxSync();")),
-        QStringLiteral("servicing the scheduler replays deferred syncs and recovers missed ones"), err);
+            && service.contains(QStringLiteral("runSfxChainWatchdog(referenceChartSecond, hasReference);"))
+            && service.contains(QStringLiteral("drainStaleSyncHandles();")),
+        QStringLiteral("servicing the scheduler replays deferred syncs, runs the chain watchdog, and removes dead syncs"), err);
     ok &= require(
         functionBody(eventDrain, QStringLiteral("void BassPreviewAudioBackend::drainEvents(double second)"))
-                .contains(QStringLiteral("serviceSfxScheduler();"))
+                .contains(QStringLiteral("serviceSfxScheduler(second, true);"))
             && functionBody(transport, QStringLiteral("void BassPreviewAudioBackend::syncBackgroundTrack(double timelineSecond)"))
-                   .contains(QStringLiteral("serviceSfxScheduler();"))
+                   .contains(QStringLiteral("serviceSfxScheduler(timelineSecond, true);"))
             && functionBody(playbackClock, QStringLiteral("BassPreviewAudioBackend::sampleHealth()"))
-                   .contains(QStringLiteral("serviceSfxScheduler();")),
-        QStringLiteral("the per-tick drain/sync commands and the worker health tick service the scheduler"), err);
+                   .contains(QStringLiteral("serviceSfxScheduler(0.0, false);")),
+        QStringLiteral("the per-tick drain/sync commands pass the GUI chart second and the health tick services without one"), err);
+    // Arming is verified against the live decode cursor at every arm site: the first group
+    // after an anchor (the anchor's own position read races the mixer thread), the next group
+    // after a callback trigger, and the next group after a deferred or watchdog replay.
+    const QString arm = functionBody(
+        eventDrain, QStringLiteral("void BassPreviewAudioBackend::armNextGroupSyncLocked(SfxArmContext& context)"));
+    ok &= require(
+        arm.contains(QStringLiteral("armedSyncCannotFire(")),
+        QStringLiteral("every armed sync is verified against the live decode cursor before it is trusted"), err);
     ok &= require(
         worker.contains(QStringLiteral("backend->drainEvents(command.second)"))
             && worker.contains(QStringLiteral("backend->syncBackgroundTrack(command.second)")),

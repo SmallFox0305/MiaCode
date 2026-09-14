@@ -81,6 +81,11 @@ enum class SfxCallbackEventKind : quint8 {
     Trigger,
     Drop,
     Deferred,
+    // A group the arm pass found already at or behind the decode cursor and therefore
+    // played inline instead of arming a sync BASS would never deliver.
+    InlineTrigger,
+    // Same discovery, but the group was past the catch-up window and was skipped.
+    InlineSkip,
 };
 
 enum class SfxCallbackDropReason : quint8 {
@@ -89,14 +94,44 @@ enum class SfxCallbackDropReason : quint8 {
     StaleHandle,
 };
 
+// Which code path armed (and, for inline events, played) the group. Recorded as POD so the
+// mixer thread can hand it to the worker's log without formatting.
+enum class SfxArmSource : quint8 {
+    Anchor,
+    Callback,
+    Deferred,
+    Watchdog,
+};
+
+inline const char* sfxArmSourceName(SfxArmSource source)
+{
+    switch (source) {
+    case SfxArmSource::Anchor:
+        return "anchor";
+    case SfxArmSource::Callback:
+        return "callback";
+    case SfxArmSource::Deferred:
+        return "deferred";
+    case SfxArmSource::Watchdog:
+    default:
+        return "watchdog";
+    }
+}
+
 struct SfxCallbackEvent {
     SfxCallbackEventKind kind = SfxCallbackEventKind::None;
     SfxCallbackDropReason dropReason = SfxCallbackDropReason::None;
+    SfxArmSource source = SfxArmSource::Callback;
     quint32 handle = 0;
     quint32 expectedHandle = 0;
     int groupIndex = -1;
     double groupSecond = 0.0;
     quint64 triggeredCount = 0;
+    // Master decode cursor when the group was played and the position its sync was armed
+    // for. Their difference is how late (in mixer bytes) the sound actually started; a
+    // callback-delivered sync reads exactly zero on every measured device.
+    quint64 decodePosition = 0;
+    quint64 targetPosition = 0;
     bool startedBackground = false;
     bool processedAfterContention = false;
     PlayedSfxSnapshot played;
