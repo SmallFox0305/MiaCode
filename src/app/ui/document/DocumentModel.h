@@ -42,6 +42,7 @@ class DocumentModel final : public QObject
     Q_PROPERTY(bool unifiedDesignerEnabled READ unifiedDesignerEnabled NOTIFY unifiedDesignerEnabledChanged)
     Q_PROPERTY(QVariantList designerSlots READ designerSlots NOTIFY documentStateChanged)
     Q_PROPERTY(QString documentTitle READ documentTitle NOTIFY documentTitleChanged)
+    Q_PROPERTY(bool hasDocument READ hasDocument NOTIFY documentStateChanged)
     Q_PROPERTY(QString currentFilePath READ currentFilePath NOTIFY currentFilePathChanged)
     Q_PROPERTY(QString currentFileName READ currentFileName NOTIFY currentFilePathChanged)
     Q_PROPERTY(QString currentDifficultyName READ currentDifficultyName NOTIFY currentDifficultyChanged)
@@ -61,6 +62,7 @@ class DocumentModel final : public QObject
     Q_PROPERTY(int syntaxWarningCount READ syntaxWarningCount NOTIFY syntaxIssuesChanged)
     Q_PROPERTY(int parsedNoteCount READ parsedNoteCount NOTIFY syntaxIssuesChanged)
     Q_PROPERTY(qulonglong documentRevision READ documentRevision NOTIFY documentStateChanged)
+    Q_PROPERTY(qulonglong documentOpenGeneration READ documentOpenGeneration NOTIFY documentStateChanged)
     Q_PROPERTY(qulonglong validationRevision READ validationRevision NOTIFY documentStateChanged)
     Q_PROPERTY(bool validationPending READ validationPending NOTIFY documentStateChanged)
     Q_PROPERTY(bool validationAvailable READ validationAvailable NOTIFY documentStateChanged)
@@ -110,6 +112,7 @@ public:
     Q_INVOKABLE void removeChartPv();
 
     QString documentTitle() const;
+    bool hasDocument() const;
     QString currentFilePath() const;
     QString currentFileName() const;
     QString currentDifficultyName() const;
@@ -132,6 +135,7 @@ public:
     int syntaxWarningCount() const;
     int parsedNoteCount() const;
     qulonglong documentRevision() const;
+    qulonglong documentOpenGeneration() const;
     qulonglong documentGeneration() const { return documentGeneration_; }
     qulonglong validationRevision() const;
     bool validationPending() const;
@@ -169,6 +173,7 @@ public:
     // document history, which is why they sit here; acting on one is a command
     // and sits behind the unsaved-changes guard.
     Q_INVOKABLE QVariantList recentDocuments();
+    Q_INVOKABLE void removeRecentDocument(const QString& path);
     Q_INVOKABLE QVariantList backupDocuments();
     // Restore an autosave snapshot. Confirms first, through the shell.
     Q_INVOKABLE void restoreBackup(const QString& path);
@@ -266,7 +271,7 @@ private:
     QString documentField(miacode::ChartWorkspaceDocumentField field) const;
     QString difficultyField(
         int difficultyId, miacode::ChartWorkspaceDifficultyField field) const;
-    void emitDocumentStateChanged();
+    void emitDocumentStateChanged(WorkspaceCommitKind kind);
     void refreshDocumentState();
     bool runWorkspaceMutation(const std::function<bool()>& mutate);
     bool applyDesignerSlotsWithoutBridge(const QVector<QPair<int, QString>>& slotValues,

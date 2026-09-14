@@ -15,6 +15,7 @@
 #include "common/OperationLog.h"
 #include "common/ProjectPreferences.h"
 #include "common/WaveformCache.h"
+#include "app/services/PlaybackStateAuthority.h"
 #include "preview/runtime/PreviewRuntime.h"
 #include "preview/runtime/PreviewStageMediaHost.h"
 #include "core/scene/PreviewProgressStatsCache.h"
@@ -579,6 +580,23 @@ void miacode::runtime::DocumentSessionHost::applyOpenedDocumentState(
     }
 }
 
+void miacode::runtime::DocumentSessionHost::resetWorkingPosition()
+{
+    if (!state_.backendActive_) {
+        return;
+    }
+    session_.resetWorkingPositionPending_ = true;
+    state_.pendingDifficultySwitchPreviewRestore_ = false;
+    state_.pendingDifficultySwitchPreviewRestoreRevision_ = 0;
+    state_.pendingDifficultySwitchPreviewRestoreDifficultyId_ = 0;
+    state_.pendingDifficultySwitchPreviewRestoreSecond_ = 0.0;
+    session_.setTouchPadAuthoringAnchor(-1.0, -1.0);
+    clearTimelineAndPreview();
+    if (auto* authority = session_.applicationServices_.playbackStateAuthority(); authority != nullptr) {
+        authority->repositionSilently(0.0, "reset_working_position");
+    }
+}
+
 void miacode::runtime::DocumentSessionHost::syncRuntimeFromWorkspace()
 {
     const miacode::ChartWorkspaceSnapshot snapshot =
@@ -588,12 +606,28 @@ void miacode::runtime::DocumentSessionHost::syncRuntimeFromWorkspace()
     }
     session_.appliedQmlWorkspaceRevision_ = snapshot.revision;
 
+    const quint64 previousOpenGeneration = session_.appliedDocumentOpenGeneration_;
+    const bool documentIdentityChanged =
+        snapshot.documentOpenGeneration != previousOpenGeneration;
+    session_.appliedDocumentOpenGeneration_ = snapshot.documentOpenGeneration;
+    const bool resetInheritedWorkingPosition =
+        documentIdentityChanged && previousOpenGeneration != 0 && state_.backendActive_;
+
     if (!snapshot.hasDocument) {
         state_.documentDirty_ = false;
         state_.currentFieldDirty_ = false;
         state_.activeDifficultyId_ = 0;
-        clearTimelineAndPreview();
+        session_.setCurrentFilePath(QString(), true);
+        if (resetInheritedWorkingPosition) {
+            resetWorkingPosition();
+        }
+        session_.resetWorkingPositionPending_ = false;
         return;
+    }
+
+    if (resetInheritedWorkingPosition) {
+        resetWorkingPosition();
+        state_.activeDifficultyId_ = 0;
     }
 
     const bool pathChanged = snapshot.filePath != state_.currentFilePath_;
@@ -650,6 +684,7 @@ void miacode::runtime::DocumentSessionHost::syncRuntimeFromWorkspace()
     if (difficultyChanged) {
         switchToDifficultyField(snapshot.activeDifficultyId);
     } else {
+        session_.resetWorkingPositionPending_ = false;
         session_.scheduleTimelineRefresh();
     }
 }

@@ -585,7 +585,7 @@
     </message>
     <message id="cover.open_recent">
         <source>Open recent</source>
-        <translation>打开最近</translation>
+        <translation>最近打开</translation>
     </message>
     <message id="cover.play_pause_space">
         <source>Play / pause (Space)</source>

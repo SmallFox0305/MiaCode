@@ -6,6 +6,7 @@ Rectangle {
     id: root
 
     required property var pages
+    property bool documentAvailable: true
 
     color: Theme.surfaceColor(Theme.colors.background.panel)
     clip: true
@@ -38,17 +39,20 @@ Rectangle {
 
             NavRow {
                 width: parent.width
+                enabled: root.documentAvailable
                 text: qsTrId("export_page.export_video")
                 selected: root.pages.activePageId === "export"
                 onClicked: root.pages.openVideoExportPage()
             }
             NavRow {
                 width: parent.width
+                enabled: root.documentAvailable
                 text: qsTrId("export_page.export_cover")
                 onClicked: root.pages.openCoverExport()
             }
             NavRow {
                 width: parent.width
+                enabled: root.documentAvailable
                 text: qsTrId("export_page.pack_as_zip")
                 onClicked: root.pages.packAsZip()
             }

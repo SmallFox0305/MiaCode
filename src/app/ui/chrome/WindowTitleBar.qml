@@ -12,6 +12,12 @@ Rectangle {
     required property var platform
     property string documentTitle: ""
     property real leadingInset: 0
+    property bool saveEnabled: true
+    property bool wholeDocumentSaveEnabled: true
+    property bool documentAvailable: true
+    property bool editorCommandsEnabled: true
+    property bool chartCommandsEnabled: true
+    property bool toolCommandsEnabled: true
     property bool normalizationEnabled: true
 
     readonly property bool useEmbeddedMenu: root.platform.embeddedMenuInTitleBar
@@ -166,6 +172,12 @@ Rectangle {
                 shortcuts: root.shortcuts
                 documentSession: root.documentSession
                 commandsEnabled: root.visible
+                saveEnabled: root.saveEnabled
+                wholeDocumentSaveEnabled: root.wholeDocumentSaveEnabled
+                documentAvailable: root.documentAvailable
+                editorCommandsEnabled: root.editorCommandsEnabled
+                chartCommandsEnabled: root.chartCommandsEnabled
+                toolCommandsEnabled: root.toolCommandsEnabled
                 normalizationEnabled: root.normalizationEnabled
             }
         }

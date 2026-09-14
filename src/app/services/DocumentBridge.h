@@ -48,6 +48,7 @@ public:
     // ---- lists the shell shows ----
     virtual QVariantList recentDocumentEntries() = 0;
     virtual void noteRecentDocument(const QString& path) = 0;
+    virtual void removeRecentDocument(const QString& path) = 0;
     virtual QVariantList backupDocumentEntries() = 0;
     virtual void restoreBackupDocument(const QString& path) = 0;
 

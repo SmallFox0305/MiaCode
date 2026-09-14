@@ -275,7 +275,10 @@ bool miacode::runtime::DocumentSessionHost::switchToDifficultyField(int difficul
     }
     // The user-facing toggle for this was removed in beta59 — behavior is
     // now always "preserve editor position + preview progress when an
-    // active difficulty was selected before the switch".
+    // active difficulty was selected before the switch" inside the same
+    // open document. Opening or closing a document sets
+    // resetWorkingPositionPending_ so this restore does not carry the
+    // outgoing chart's playhead into the incoming one.
     // Also preserve when coming FROM the latency page OR the export page: both set
     // activeDifficultyId_=0 (so hasActiveDifficulty() is false) but maintain a valid
     // playhead in pauseSecond_ (export audition mirrors the latency
@@ -288,16 +291,18 @@ bool miacode::runtime::DocumentSessionHost::switchToDifficultyField(int difficul
     // it to chartPage_ later). Widgets outline writes the destination key before
     // calling us; QML leaveOverlayPage does not, so activeOutlineKey_ can still be
     // "export" or "latency" here and cannot be used as the source. A stale
-    // cross-file value is guarded against by loadDocument resetting
-    // pauseSecond_ to 0.
+    // cross-file value is guarded by resetWorkingPositionPending_ when
+    // documentOpenGeneration advances.
     const bool leavingMetadataPage = state_.activeOutlineKey_ == QLatin1String("metadata");
     const bool leavingOverlayField = state_.activeOutlineKey_ == QLatin1String("export")
         || state_.activeOutlineKey_ == QLatin1String("latency");
-    const bool restoreSwitchView = session_.hasActiveDifficulty()
-        || state_.latencySandboxAuditionActive_
-        || state_.exportPreviewAuditionActive_
-        || leavingMetadataPage
-        || leavingOverlayField;
+    const bool restoreSwitchView = !session_.resetWorkingPositionPending_
+        && (session_.hasActiveDifficulty()
+            || state_.latencySandboxAuditionActive_
+            || state_.exportPreviewAuditionActive_
+            || leavingMetadataPage
+            || leavingOverlayField);
+    session_.resetWorkingPositionPending_ = false;
     const double restorePreviewSecond = restoreSwitchView
         ? qMax(0.0, state_.playing_
               ? session_.currentPreviewAuthoritativeAudioClockSecond()
@@ -340,7 +345,7 @@ bool miacode::runtime::DocumentSessionHost::switchToDifficultyField(int difficul
         state_.timelineQuickStateBridge_ != nullptr ? state_.timelineQuickStateBridge_->waveformData() : nullptr;
     clearTimelineAndPreview(restoreSwitchView);
     if (restoreSwitchView) {
-        // 页面切换保留视口与画面，目标谱面解析完成后替换内容。
+        // 同一工程内切换难度时保留播放时间与时间轴位置，目标谱面解析完成后替换内容。
         if (auto* authority = session_.applicationServices_.playbackStateAuthority(); authority != nullptr) {
             authority->repositionSilently(restorePreviewSecond, "switch_to_difficulty_field");
         }

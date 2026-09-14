@@ -23,6 +23,7 @@ Item {
     required property bool sourceEditorFocused
     // Transforms edit the chart, so they are inert without one.
     property bool chartCommandsEnabled: true
+    property bool playbackCommandsEnabled: true
 
     // A transform acts on the editor's selection, which only the editor knows.
     // Routing it through the backend meant reading a hidden widget's cursor
@@ -70,7 +71,7 @@ Item {
         sequence: root.shortcuts.revision >= 0
             ? root.shortcuts.sequence("preview.stop_or_play", "Ctrl+X")
             : ""
-        enabled: sequence !== ""
+        enabled: root.playbackCommandsEnabled && sequence !== ""
         context: Qt.WindowShortcut
         onActivated: root.previewSession.stop()
     }
@@ -79,7 +80,7 @@ Item {
         sequence: root.shortcuts.revision >= 0
             ? root.shortcuts.sequence("preview.play_pause_global", "Ctrl+Shift+X")
             : ""
-        enabled: sequence !== "" && !root.sourceEditorFocused
+        enabled: root.playbackCommandsEnabled && sequence !== "" && !root.sourceEditorFocused
         context: Qt.ApplicationShortcut
         onActivated: root.previewSession.togglePlayback()
     }
@@ -88,7 +89,7 @@ Item {
         sequence: root.shortcuts.revision >= 0
             ? root.shortcuts.sequence("preview.speed_down", "Ctrl+O")
             : ""
-        enabled: sequence !== ""
+        enabled: root.playbackCommandsEnabled && sequence !== ""
         context: Qt.WindowShortcut
         onActivated: root.previewSession.adjustRate(-1)
     }
@@ -97,7 +98,7 @@ Item {
         sequence: root.shortcuts.revision >= 0
             ? root.shortcuts.sequence("preview.speed_up", "Ctrl+P")
             : ""
-        enabled: sequence !== ""
+        enabled: root.playbackCommandsEnabled && sequence !== ""
         context: Qt.WindowShortcut
         onActivated: root.previewSession.adjustRate(1)
     }

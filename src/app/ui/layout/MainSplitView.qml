@@ -45,11 +45,13 @@ Item {
     // User preference AND backend chart-bottom-tabs mode (export/metadata
     // call setChartBottomTabsMode(false); latency/difficulty turn it back on).
     readonly property bool bottomPanelEffectivelyVisible:
-        root.viewState.bottomPanelVisible && root.timelineSession.panelVisible
+        root.viewState.difficultyEditorActive
+        && root.viewState.bottomPanelVisible && root.timelineSession.panelVisible
     readonly property bool exportVideoActive:
         root.pages.activePageId === "export"
     readonly property real previewEditorAvailableWidth:
         Math.max(1, workspaceSplit.width - (preview.visible ? Theme.splitDividerThickness : 0))
+    signal openRequested()
     signal settingsRequested()
 
     function persistBottomPanelHeightRatio() {
@@ -118,6 +120,8 @@ Item {
     }
 
     function showFullscreenPreview() {
+        if (!root.documentSession.hasDocument)
+            return
         // Stop-gap for the export-page + fullscreen Intel iGPU D3D11 crash.
         if (root.exportVideoActive)
             return
@@ -169,6 +173,14 @@ Item {
         target: root.preferencesModel
         function onInterfaceChanged() {
             root.syncWorkspacePanelOrder()
+        }
+    }
+
+    Connections {
+        target: root.documentSession
+        function onDocumentStateChanged() {
+            if (!root.documentSession.hasDocument)
+                fullscreenPreview.visible = false
         }
     }
 
@@ -245,6 +257,7 @@ Item {
                         documentSession: root.documentSession
                         commands: root.commands
                         preferences: root.preferences
+                        onOpenRequested: root.openRequested()
                     }
 
                     // v2 video export center: QML chrome + ExportVideoController panel surface.
@@ -290,6 +303,7 @@ Item {
 
             PreviewPane {
                 id: preview
+                documentAvailable: root.documentSession.hasDocument
                 surfaceActive: !fullscreenPreview.visible
                 previewSession: root.previewSession
                 preferences: root.preferences

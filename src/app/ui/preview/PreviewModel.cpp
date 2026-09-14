@@ -124,7 +124,9 @@ void PreviewModel::rebuildStatistics()
         const QString name = separator > 0
             ? text.left(separator)
             : QString::fromLatin1(descriptor.fallbackName);
-        const QString value = separator > 0 ? text.mid(separator + 1).trimmed() : QStringLiteral("0/0");
+        const QString value = statisticsAvailable_ && separator > 0
+            ? text.mid(separator + 1).trimmed()
+            : QString();
         const int valueSeparator = value.indexOf(QLatin1Char('/'));
         const int played = valueSeparator > 0 ? value.left(valueSeparator).toInt() : 0;
         const int total = valueSeparator > 0 ? value.mid(valueSeparator + 1).toInt() : 0;
@@ -174,6 +176,7 @@ void PreviewModel::refreshFromBackend(bool force)
         ? qtTrId("qml.muri_analysis")
         : qtTrId("qml.normal_rendering");
     const QStringList nextStatisticsTexts = surface()->statsTexts();
+    const bool nextStatisticsAvailable = !nextStatisticsTexts.isEmpty();
     const int nextMuriHandRadiusPx = surface()->muriHandRadiusPx();
     const int nextMuriTapOnSlideThresholdMs = surface()->muriTapOnSlideThresholdMs();
 
@@ -188,7 +191,8 @@ void PreviewModel::refreshFromBackend(bool force)
         || nextRenderModeLabel != renderModeLabel_
         || nextMuriCheckEnabled != muriCheckEnabled_
         || nextSmoothStarErase != smoothStarErase_;
-    const bool statisticsChangedValue = force || nextStatisticsTexts != statisticsTexts_;
+    const bool statisticsChangedValue = force || nextStatisticsTexts != statisticsTexts_
+        || nextStatisticsAvailable != statisticsAvailable_;
     const bool muriParametersChangedValue = force
         || nextMuriHandRadiusPx != muriHandRadiusPx_
         || nextMuriTapOnSlideThresholdMs != muriTapOnSlideThresholdMs_;
@@ -206,6 +210,7 @@ void PreviewModel::refreshFromBackend(bool force)
     muriTapOnSlideThresholdMs_ = nextMuriTapOnSlideThresholdMs;
     if (statisticsChangedValue) {
         statisticsTexts_ = nextStatisticsTexts;
+        statisticsAvailable_ = nextStatisticsAvailable;
         rebuildStatistics();
     }
 
@@ -274,6 +279,8 @@ QVariantMap PreviewModel::muriParameterRanges() const
 }
 
 QVariantList PreviewModel::statistics() const { return statistics_; }
+
+bool PreviewModel::statisticsAvailable() const { return statisticsAvailable_; }
 
 QString PreviewModel::currentSkinDirectory() const
 {

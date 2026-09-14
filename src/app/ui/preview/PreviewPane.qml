@@ -8,6 +8,7 @@ Rectangle {
 
     required property var previewSession
     required property var preferences
+    property bool documentAvailable: true
     // See PreviewTransport: the canvas menu hides on the export page.
     property bool exportPageActive: false
     // MainSplitView keeps the transport chrome mounted for layout stability, but
@@ -54,6 +55,7 @@ Rectangle {
 
         ChromeRow {
             id: renderModeButton
+            enabled: root.documentAvailable
             implicitWidth: renderModeLabelText.implicitWidth + leftPadding + rightPadding
             selected: renderModeMenu.active
             focusPolicy: Qt.TabFocus
@@ -119,6 +121,7 @@ Rectangle {
                 hudShadowColor: Theme.colors.previewHud.shadow
             }
         }
+
     }
 
     PreviewTransport {
@@ -129,6 +132,8 @@ Rectangle {
         previewSession: root.previewSession
         preferences: root.preferences
         exportPageActive: root.exportPageActive
+        dataAvailable: root.documentAvailable
+        enabled: root.documentAvailable
         onFullscreenRequested: root.fullscreenRequested()
     }
 
@@ -138,5 +143,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         statistics: root.previewSession.statistics
+        dataAvailable: root.previewSession.statisticsAvailable
+        enabled: root.documentAvailable
     }
 }

@@ -11,6 +11,7 @@ Item {
     id: root
 
     required property var statistics
+    property bool dataAvailable: true
 
     readonly property int iconSlotWidth: 24
     readonly property int contentSpacing: 6
@@ -119,7 +120,7 @@ Item {
                             width: parent.width
                             // 数值水平缩字时维持行槽高度，名称和图标的中心位置稳定。
                             height: valueWidthProbe.implicitHeight
-                            text: cell.modelData.value
+                            text: root.dataAvailable ? cell.modelData.value : "—"
                             color: Theme.colors.text.primary
                             font.family: Theme.uiFont
                             font.pixelSize: root.wideLayout ? Theme.uiFontSize : Theme.secondaryFontSize

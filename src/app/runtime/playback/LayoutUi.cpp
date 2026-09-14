@@ -67,6 +67,7 @@ void miacode::runtime::PlaybackCoordinator::refreshPreviewObjectStatsTotals(cons
         state_.scene_->setProgressStatsCache(state_.previewProgressStatsCache_);
     }
     updatePreviewObjectStats(state_.pauseSecond_);
+    publishPreviewPlayhead();
 }
 
 void miacode::runtime::PlaybackCoordinator::clearPreviewObjectStats()
@@ -76,6 +77,7 @@ void miacode::runtime::PlaybackCoordinator::clearPreviewObjectStats()
         state_.scene_->setProgressStatsCache(state_.previewProgressStatsCache_);
     }
     updatePreviewObjectStats(0.0);
+    publishPreviewPlayhead();
 }
 
 int miacode::runtime::PlaybackCoordinator::updatePreviewStatsLayoutMode(int hostWidth)

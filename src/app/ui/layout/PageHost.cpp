@@ -52,6 +52,21 @@ PageHost::PageHost(miacode::ShellNotifications& notifications,
             session->clearPendingSelectionRangeExport();
         }
     });
+    connect(&document, &DocumentModel::documentStateChanged, this, [this]() {
+        if (document_ == nullptr || document_->hasDocument() || activePageId_.isEmpty()) {
+            return;
+        }
+        if (activePageId_ == QLatin1String("export")) {
+            if (ExportSession* const session = exportSessionObject(); session != nullptr) {
+                session->leave();
+            }
+        }
+        activePageId_.clear();
+        resumeDifficultyId_ = 0;
+        resumeEditorKey_.clear();
+        resumeEditorKeyExplicit_ = false;
+        emit activePageIdChanged();
+    });
 }
 
 ExportSession* PageHost::exportSessionObject() const
@@ -166,7 +181,8 @@ bool PageHost::requestPageSwitch(std::function<bool()> action)
 bool PageHost::openVideoExportPage(const QString& tab)
 {
     miacode::EditorPageRouter* const pages = router();
-    if (pages == nullptr || exportSessionObject() == nullptr) {
+    if (document_ == nullptr || !document_->hasDocument()
+        || pages == nullptr || exportSessionObject() == nullptr) {
         return false;
     }
     const QString requestedTab = tab == QLatin1String("batch")
@@ -200,7 +216,7 @@ bool PageHost::openExportPage()
 bool PageHost::openLatencyPage()
 {
     miacode::EditorPageRouter* const pages = router();
-    if (pages == nullptr) {
+    if (document_ == nullptr || !document_->hasDocument() || pages == nullptr) {
         return false;
     }
     rememberResumeDifficulty();
@@ -257,7 +273,8 @@ bool PageHost::leaveOverlayPage()
 bool PageHost::ensureDifficultyPageActive(int difficultyId)
 {
     miacode::EditorPageRouter* const pages = router();
-    if (pages == nullptr || difficultyId <= 0) {
+    if (document_ == nullptr || !document_->hasDocument()
+        || pages == nullptr || difficultyId <= 0) {
         return false;
     }
     if (pages->hasActiveDifficulty() && pages->activeDifficultyId() == difficultyId) {
@@ -277,7 +294,7 @@ bool PageHost::clearEditorPresentation()
 
 void PageHost::openMediaProcessingTools()
 {
-    if (navigationPending_) {
+    if (document_ == nullptr || !document_->hasDocument() || navigationPending_) {
         return;
     }
     if (overlayActive()) {
@@ -295,7 +312,8 @@ void PageHost::openMediaProcessingTools()
 
 void PageHost::openNormalizeWholeChart()
 {
-    if (navigationPending_) {
+    if (document_ == nullptr || !document_->hasDocument()
+        || document_->currentDifficultyId() <= 0 || navigationPending_) {
         return;
     }
     if (activePageId_ == QLatin1String("export")) {
@@ -321,7 +339,7 @@ void PageHost::openBatchExport()
 
 bool PageHost::openCoverExport(int difficultyId)
 {
-    if (router() == nullptr) {
+    if (document_ == nullptr || !document_->hasDocument() || router() == nullptr) {
         return false;
     }
     rememberResumeDifficulty();
@@ -339,6 +357,9 @@ bool PageHost::openCoverExport(int difficultyId)
 
 void PageHost::packAsZip()
 {
+    if (document_ == nullptr || !document_->hasDocument()) {
+        return;
+    }
     if (miacode::EditorPageRouter* const pages = router(); pages != nullptr) {
         pages->packChartAsZip();
     }

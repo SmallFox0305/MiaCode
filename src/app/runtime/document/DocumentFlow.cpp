@@ -130,6 +130,17 @@ void miacode::runtime::DocumentSessionHost::noteRecentDocument(const QString& pa
     session_.addRecentFilePath(path);
 }
 
+void miacode::runtime::DocumentSessionHost::removeRecentDocument(const QString& path)
+{
+    const QString normalizedPath = path.isEmpty() ? QString() : QDir::cleanPath(path);
+    if (normalizedPath.isEmpty()) {
+        return;
+    }
+    if (state_.recentFilePaths_.removeAll(normalizedPath) > 0) {
+        session_.savePortableState();
+    }
+}
+
 bool Session::openFileAtPath(const QString& path, bool showErrors)
 {
     return documents_->openFileAtPath(path, showErrors);
@@ -159,8 +170,6 @@ bool Session::openStartupTarget(const QString& path)
         }
 
         setCurrentFilePath(QString(), true);
-        applicationServices_.workspace().openSource(SimaiDocument::createEmpty().toText());
-        loadDocument();
         postShellNotice(
             qtTrId("dialog.open_startup_folder.missing_maidata.title"),
             qtTrId("dialog.open_startup_folder.missing_maidata.message")

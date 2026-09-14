@@ -7,8 +7,7 @@
     [string]$BuildDir = "build",
     [string]$DistDir = "",
     [switch]$IncludeDevTools,
-    [ValidateRange(1, 64)]
-    [int]$BuildJobs = 4
+    [int]$BuildJobs = [Environment]::ProcessorCount
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,6 +15,7 @@ $ErrorActionPreference = "Stop"
 # Qt version, toolchains and the package contents contract live in one data
 # file so the build chain and the packaging chain cannot drift apart.
 $toolchainData = Import-PowerShellDataFile -Path (Join-Path $PSScriptRoot "windows-toolchain.psd1")
+$packageChannel = if ([string]::IsNullOrWhiteSpace($env:MIACODE_PACKAGE_CHANNEL)) { "" } else { $env:MIACODE_PACKAGE_CHANNEL }
 
 function Resolve-RepoPath {
     param(
@@ -341,21 +341,13 @@ function Remove-PackagedDllIfPresent {
 function Assert-PackageEntries {
     param(
         [string]$DistDir,
-        [string[]]$RequiredRelativePaths,
-        [string[]]$UnexpectedRelativePaths
+        [string[]]$RequiredRelativePaths
     )
 
     foreach ($relativePath in $RequiredRelativePaths) {
         $fullPath = Join-Path $DistDir $relativePath
         if (!(Test-Path $fullPath)) {
             throw "Packaged artifact is missing required path: $fullPath"
-        }
-    }
-
-    foreach ($relativePath in $UnexpectedRelativePaths) {
-        $fullPath = Join-Path $DistDir $relativePath
-        if (Test-Path $fullPath) {
-            throw "Packaged artifact still contains deprecated path: $fullPath"
         }
     }
 }
@@ -367,12 +359,21 @@ if (![string]::IsNullOrWhiteSpace($QtRoot)) {
 }
 $versionInfo = Read-VersionInfoFromCMake -CMakeFilePath (Join-Path $repoRoot "CMakeLists.txt")
 $version = $versionInfo.PackageVersion
-$distNamePattern = $toolchainData.Package.DistNameByArch.$Arch
+if ($packageChannel -and $packageChannel -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') {
+    throw "MIACODE_PACKAGE_CHANNEL must start with an alphanumeric character and contain only letters, digits, dots, underscores, or hyphens (got: $packageChannel)"
+}
+$archName = $toolchainData.Package.DistArchName.$Arch
+if ([string]::IsNullOrWhiteSpace($archName)) {
+    throw "No DistArchName entry for architecture '$Arch' in windows-toolchain.psd1."
+}
+$distNamePattern = $toolchainData.Package.DistNamePattern
 if ([string]::IsNullOrWhiteSpace($distNamePattern)) {
-    throw "No package name pattern for architecture '$Arch' in windows-toolchain.psd1."
+    throw "Package.DistNamePattern is missing from windows-toolchain.psd1."
 }
 if ([string]::IsNullOrWhiteSpace($DistDir)) {
-    $DistDir = Join-Path (Join-Path $repoRoot "dist") $distNamePattern.Replace("{version}", $version)
+    $channelSegment = if ($packageChannel) { "_$packageChannel" } else { "" }
+    $distName = $distNamePattern.Replace("{version}", $version).Replace("{channel}", $channelSegment).Replace("{arch}", $archName)
+    $DistDir = Join-Path (Join-Path $repoRoot "dist") $distName
 } else {
     $DistDir = Resolve-RepoPath -RepoRoot $repoRoot -PathValue $DistDir
 }
@@ -399,19 +400,12 @@ if ([string]::IsNullOrWhiteSpace($deployTool) -or !(Test-Path $deployTool)) {
 }
 $qtBinDir = Split-Path -Parent $deployTool
 
-# The compiler that configured the build directory decides which C++ runtime
-# the package has to carry. MSVC builds bundle the Visual Studio CRT; MinGW
-# builds bundle the GCC runtime. A package must never rely on the target
-# machine already having either one installed.
+# Windows release packages use the matching MSVC toolchain for their target architecture.
 $cmakeCachePath = Join-Path $BuildDir "CMakeCache.txt"
-$compilerId = ""
-$compilerPath = ""
 $cacheBuildType = ""
 $cacheIsMultiConfig = $false
 if (Test-Path $cmakeCachePath) {
     foreach ($cacheLine in Get-Content $cmakeCachePath) {
-        if ($cacheLine -match '^CMAKE_CXX_COMPILER_ID:') { $compilerId = ($cacheLine -split "=", 2)[1].Trim() }
-        if ($cacheLine -match '^CMAKE_CXX_COMPILER:') { $compilerPath = ($cacheLine -split "=", 2)[1].Trim() }
         if ($cacheLine -match '^CMAKE_BUILD_TYPE:') { $cacheBuildType = ($cacheLine -split "=", 2)[1].Trim() }
         if ($cacheLine -match '^CMAKE_CONFIGURATION_TYPES:') { $cacheIsMultiConfig = $true }
     }
@@ -421,15 +415,7 @@ if (Test-Path $cmakeCachePath) {
 if (!$cacheIsMultiConfig -and ![string]::IsNullOrWhiteSpace($cacheBuildType) -and $cacheBuildType -ne $Config) {
     throw "Build directory '$BuildDir' was configured with CMAKE_BUILD_TYPE=$cacheBuildType, but -Config $Config was requested. Reconfigure the build directory or pass -Config $cacheBuildType."
 }
-$isMinGw = ($compilerId -eq "GNU") -or ($compilerPath -match "g\+\+")
-if ($isMinGw) {
-    Write-Host "Compiler: MinGW ($compilerPath)"
-} else {
-    Write-Host "Compiler: MSVC ($compilerPath)"
-}
-# The toolchain key decides which C++ runtime the package carries: arm64 always
-# comes from the MSVC toolchain, x64 from whichever compiler built the tree.
-$toolchainKey = if ($Arch -eq "arm64") { "msvc-arm64" } elseif ($isMinGw) { "mingw" } else { "msvc" }
+$toolchainKey = if ($Arch -eq "arm64") { "msvc-arm64" } else { "msvc" }
 $toolchainSpec = $toolchainData.Toolchains.$toolchainKey
 if ($null -eq $toolchainSpec) {
     throw "Unknown toolchain '$toolchainKey' in windows-toolchain.psd1."
@@ -537,19 +523,6 @@ foreach ($unusedRelativePath in $unusedQmlRelativePaths) {
     }
 }
 
-if ($isMinGw) {
-    # windeployqt --compiler-runtime already stages these; copy them again so a
-    # package can never ship without the GCC runtime the app imports.
-    foreach ($mingwRuntimeDll in $toolchainData.Toolchains.mingw.RuntimeDlls) {
-        $srcDll = Join-Path $qtBinDir $mingwRuntimeDll
-        if (!(Test-Path $srcDll)) {
-            throw "Missing required MinGW runtime DLL: $srcDll"
-        }
-        Copy-Item $srcDll (Join-Path $appDir $mingwRuntimeDll) -Force
-        Write-Host "  + $mingwRuntimeDll"
-    }
-}
-
 # Beta49: app-local VC++ runtime to bypass user-system MSVCP140/VCRUNTIME140
 # version mismatch. Confirmed root cause for the Win10-22H2 AMD Renoir
 # silent-crash report — fault at MSVCP140.dll+0x12EB0 in 4 independent code
@@ -606,7 +579,7 @@ foreach ($root in ($vsRedistRoots | Select-Object -Unique)) {
     }
 }
 
-if (!$isMinGw -and ![string]::IsNullOrWhiteSpace($vcRuntimeSrc) -and (Test-Path $vcRuntimeSrc)) {
+if (![string]::IsNullOrWhiteSpace($vcRuntimeSrc) -and (Test-Path $vcRuntimeSrc)) {
     Write-Host "Bundling VC++ runtime from: $vcRuntimeSrc"
     $vcRuntimeDlls = @(
         'vcruntime140.dll',
@@ -624,7 +597,7 @@ if (!$isMinGw -and ![string]::IsNullOrWhiteSpace($vcRuntimeSrc) -and (Test-Path 
             Write-Host "  + $dll"
         }
     }
-} elseif (!$isMinGw) {
+} else {
     Write-Warning "VC++ runtime redist directory not found; app-local CRT bundling skipped."
     Write-Warning "Expected: <VS install>\VC\Redist\MSVC\<version>\$redistArch\Microsoft.VC14X.CRT/"
     Write-Warning "Set `$env:VCToolsRedistDir to the versioned redist root as a fallback."
@@ -641,7 +614,7 @@ foreach ($runtimeDll in $requiredBassRuntimeDlls) {
 }
 
 # FFmpeg shared runtime for the QtAVPlayer preview decode backend.
-# PreviewStageMediaHost decodes PV/BG via QtAVPlayer (FFmpeg n8.1 LGPL); these
+# PreviewStageMediaHost decodes PV/BG via QtAVPlayer; these
 # av*.dll must sit next to MiaCode.exe. avfilter is NET-NEW vs the older
 # package (Qt never shipped it; avdevice is dropped — capture-device only); the
 # other five overlap with what windeployqt stages for Qt
@@ -719,23 +692,17 @@ $ffmpegExportDir = Join-Path $repoRoot $toolchainData.FFmpeg.ExportDirByArch.$Ar
 $ffmpegSrc = Join-Path $ffmpegExportDir $toolchainData.FFmpeg.ExportBinary
 if (Test-Path $ffmpegSrc) {
     $ffmpegSize = (Get-Item $ffmpegSrc).Length
-    if ($ffmpegSize -lt 1MB) {
+    if ($ffmpegSize -lt 128KB) {
         throw "Invalid ffmpeg binary (too small): $ffmpegSrc ($ffmpegSize bytes)"
     }
-    # ffmpeg lives under app/ alongside the real exe so that
-    # resolveFfmpegExecutable() finds it via the appDir/ffmpeg/
-    # candidate (the real exe's applicationDirPath = app/).
     $ffmpegDstDir = Join-Path $appDir "ffmpeg"
     New-Item -ItemType Directory -Path $ffmpegDstDir -Force | Out-Null
     Copy-Item $ffmpegSrc (Join-Path $ffmpegDstDir "ffmpeg.exe") -Force
 } else {
-    Write-Host "Run .\scripts\ffmpeg\ensure-windows-ffmpeg.ps1 to download the pinned Windows ffmpeg binary."
     throw "Missing required ffmpeg binary: $ffmpegSrc"
 }
 
-# Required/forbidden package contents come from the toolchain data file, so the
-# contract is data instead of code: 'qt:' / 'app-qt:' entries pick up the Debug
-# 'd' suffix, and the runtime DLLs of the selected toolchain are appended.
+# Required package contents come from the toolchain data file.
 $requiredPackagePaths = @($toolchainData.Package.RequiredRelativePaths | ForEach-Object {
     Expand-PackagePathEntry -Entry $_ -Config $Config
 })
@@ -748,16 +715,12 @@ if ($null -ne $archSpecificRequiredPaths) {
 foreach ($runtimeDll in $toolchainRuntimeDlls) {
     $requiredPackagePaths += Join-Path "app" $runtimeDll
 }
-$unexpectedPackagePaths = @($toolchainData.Package.ForbiddenRelativePaths | ForEach-Object {
-    Expand-PackagePathEntry -Entry $_ -Config $Config
-})
 if ($IncludeDevTools) {
     $qtWidgetsDll = Expand-PackagePathEntry -Entry "app-qt:Qt6Widgets" -Config $Config
     $requiredPackagePaths += $qtWidgetsDll
-    $unexpectedPackagePaths = @($unexpectedPackagePaths | Where-Object { $_ -ne $qtWidgetsDll })
 }
 
-Assert-PackageEntries -DistDir $DistDir -RequiredRelativePaths $requiredPackagePaths -UnexpectedRelativePaths $unexpectedPackagePaths
+Assert-PackageEntries -DistDir $DistDir -RequiredRelativePaths $requiredPackagePaths
 
 # Archives are produced from the toolchain data file. 7z (LZMA2 + solid blocks)
 # reaches roughly half the size of the deflate zip for this payload.

@@ -42,7 +42,7 @@ Item {
             root.preferences.sidebarVisible = true
         }
 
-        if (viewId === "export") {
+        if (viewId === "export" && root.documentSession.hasDocument) {
             root.pages.rememberEditorReturnTarget(root.viewState.activeEditorKey)
             root.pages.openVideoExportPage()
         }
@@ -55,9 +55,15 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         activeView: root.viewState.activeSidebarView
+        documentAvailable: root.documentSession.hasDocument
+        toolsAvailable: root.documentSession.hasDocument
+        chartEditorAvailable: root.documentSession.hasDocument
+            && root.documentSession.currentDifficultyId > 0 && !root.pages.overlayActive
         normalizationEnabled: root.pages.activePageId !== "export"
         onViewRequested: viewId => root.activateView(viewId)
         onToolRequested: function(toolId) {
+            if (!root.documentSession.hasDocument)
+                return
             if (toolId === "latency") {
                 root.pages.rememberEditorReturnTarget(root.viewState.activeEditorKey)
                 root.pages.openLatencyPage()
@@ -82,6 +88,7 @@ Item {
             color: root.compact ? "transparent" : Theme.surfaceColor(Theme.colors.background.panel)
             anchors.fill: parent
             visible: root.viewState.activeSidebarView === "chart"
+            enabled: root.documentSession.hasDocument
             viewState: root.viewState
             documentSession: root.documentSession
             commands: root.commands
@@ -92,6 +99,7 @@ Item {
             color: root.compact ? "transparent" : Theme.surfaceColor(Theme.colors.background.panel)
             anchors.fill: parent
             visible: root.viewState.activeSidebarView === "export"
+            documentAvailable: root.documentSession.hasDocument
             pages: root.pages
         }
     }

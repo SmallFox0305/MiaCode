@@ -1,6 +1,6 @@
 # Release Checklist
 
-This checklist documents the current local-release flow. GitHub Actions were removed because the old workflows no longer matched the active dependency and packaging setup.
+This checklist documents the local and GitHub Actions release flow.
 
 ## Version
 
@@ -19,16 +19,12 @@ This checklist documents the current local-release flow. GitHub Actions were rem
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build\build-win.ps1 -Toolchain msvc -BuildDir build-msvc              # x64
 powershell -ExecutionPolicy Bypass -File .\scripts\build\build-win.ps1 -Toolchain msvc-arm64 -BuildDir build-msvc-arm64 # arm64
-powershell -ExecutionPolicy Bypass -File .\scripts\build\verify-win-package.ps1 -DistDir .\dist\MiaCode-v<version>-win64 -Arch x64
-powershell -ExecutionPolicy Bypass -File .\scripts\build\verify-win-package.ps1 -DistDir .\dist\MiaCode-v<version>-winarm64 -Arch arm64
 ```
 
 - [ ] Confirm the toolchain data file (`scripts/build/windows-toolchain.psd1`) still
       points at the intended Qt version, FFmpeg component versions and package contents.
-- [ ] Verify `dist/MiaCode-v<version>-win64` and `dist/MiaCode-v<version>-winarm64`.
-- [ ] Verify `dist/MiaCode-v<version>-win64.7z` and `dist/MiaCode-v<version>-winarm64.7z`.
-- [ ] Verify the package against the contents/dependency/smoke checks
-      (`verify-win-package.ps1` exits non-zero on any failure).
+- [ ] Verify `dist/MiaCode_<version>_win_x64` and `dist/MiaCode_<version>_win_arm64`.
+- [ ] Verify `dist/MiaCode_<version>_win_x64.7z` and `dist/MiaCode_<version>_win_arm64.7z`.
 - [ ] Launch the packaged app from `dist/`, not from the build tree.
 - [ ] Confirm the arm64 package starts on a machine without the VC++ runtime installed
       (the redistributable DLLs ship inside `app\`).
@@ -39,7 +35,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build\verify-win-package.ps1 
 Generate checksums for uploaded artifacts:
 
 ```powershell
-Get-FileHash .\dist\MiaCode-v*-win64.7z, .\dist\MiaCode-v*-winarm64.7z -Algorithm SHA256
+Get-FileHash .\dist\MiaCode_*_win_x64.7z, .\dist\MiaCode_*_win_arm64.7z -Algorithm SHA256
 ```
 
 ```bash

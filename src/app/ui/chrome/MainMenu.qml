@@ -16,6 +16,12 @@ Item {
     // Source of the 调整 menu's operation rows; see chartTransformMenu().
     required property var documentSession
     property bool commandsEnabled: true
+    property bool saveEnabled: true
+    property bool wholeDocumentSaveEnabled: true
+    property bool documentAvailable: true
+    property bool editorCommandsEnabled: true
+    property bool chartCommandsEnabled: true
+    property bool toolCommandsEnabled: true
     property bool normalizationEnabled: true
     // Re-read each time the menu opens rather than kept live: the list only
     // changes when a document is opened, and a menu nobody is looking at has no
@@ -181,7 +187,8 @@ Item {
             id: label
             text: btn.menu ? btn.menu.title : ""
             mnemonicVisible: true
-            color: (btn.hovered || btn.menuOpen) ? Theme.colors.text.active
+            color: !btn.enabled ? Theme.colors.text.disabled
+                 : (btn.hovered || btn.menuOpen) ? Theme.colors.text.active
                                                  : Theme.colors.text.chrome
             font.family: Theme.uiFont
             font.pixelSize: Theme.uiFontSize
@@ -349,7 +356,7 @@ Item {
             }
             AppMenuAction {
                 text: qsTrId("qml.close_document")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.documentAvailable
                 onTriggered: root.commands.closeDocumentRequested()
             }
             AppMenuSeparator {}
@@ -357,19 +364,19 @@ Item {
                 text: qsTrId("action.save")
                 shortcut: StandardKey.Save
                 shortcutText: root.shortcuts.standardDisplayText(StandardKey.Save)
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.saveEnabled
                 onTriggered: root.commands.saveRequested()
             }
             AppMenuAction {
                 text: qsTrId("qml.save_entire_document")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.wholeDocumentSaveEnabled
                 onTriggered: root.commands.saveWholeDocumentRequested()
             }
             AppMenuAction {
                 text: qsTrId("action.save_as")
                 shortcut: StandardKey.SaveAs
                 shortcutText: root.shortcuts.standardDisplayText(StandardKey.SaveAs)
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.wholeDocumentSaveEnabled
                 onTriggered: root.commands.saveAsRequested()
             }
         }
@@ -418,19 +425,19 @@ Item {
                 text: qsTrId("metadata.find")
                 shortcut: StandardKey.Find
                 shortcutText: root.shortcuts.standardDisplayText(StandardKey.Find)
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.editorCommandsEnabled
                 onTriggered: root.commands.findRequested()
             }
             AppMenuAction {
                 text: qsTrId("net.select_all")
                 shortcut: StandardKey.SelectAll
                 shortcutText: root.shortcuts.standardDisplayText(StandardKey.SelectAll)
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.editorCommandsEnabled
                 onTriggered: root.commands.selectAllRequested()
             }
             AppMenuAction {
                 text: qsTrId("qml.select_current_line")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.editorCommandsEnabled
                 onTriggered: root.commands.selectCurrentLineRequested()
             }
         }
@@ -440,23 +447,24 @@ Item {
             title: qsTrId("menu.tools")
             AppMenuAction {
                 text: qsTrId("dialog.unsaved_field_changes.field.metadata")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.toolCommandsEnabled
                 onTriggered: root.commands.metadataRequested()
             }
             AppMenuSeparator {}
             AppMenuAction {
                 text: qsTrId("qml.latency_calibration")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.toolCommandsEnabled
                 onTriggered: root.commands.latencyCalibrationRequested()
             }
             AppMenuAction {
                 text: qsTrId("media_tools.audio_video_processing")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.documentAvailable
                 onTriggered: root.commands.mediaToolsRequested()
             }
             AppMenuAction {
                 text: qsTrId("qml.normalize_whole_chart")
-                enabled: root.commandsEnabled && root.normalizationEnabled
+                enabled: root.commandsEnabled && root.chartCommandsEnabled
+                         && root.normalizationEnabled
                 onTriggered: root.commands.normalizeChartRequested()
             }
         }
@@ -478,7 +486,7 @@ Item {
                     objectName: "adjustTransform_" + modelData.id
                     text: modelData.label
                     shortcutText: root.shortcuts.displayText(modelData.id)
-                    enabled: root.commandsEnabled
+                    enabled: root.commandsEnabled && root.chartCommandsEnabled
                     onTriggered: root.commands.chartTransformRequested(modelData.id)
                 }
             }
@@ -490,7 +498,7 @@ Item {
                     objectName: "adjustTransform_" + modelData.id
                     text: modelData.label
                     shortcutText: root.shortcuts.displayText(modelData.id)
-                    enabled: root.commandsEnabled
+                    enabled: root.commandsEnabled && root.chartCommandsEnabled
                     onTriggered: root.commands.chartTransformRequested(modelData.id)
                 }
             }
@@ -502,13 +510,14 @@ Item {
                     objectName: "adjustTransform_" + modelData.id
                     text: modelData.label
                     shortcutText: root.shortcuts.displayText(modelData.id)
-                    enabled: root.commandsEnabled
+                    enabled: root.commandsEnabled && root.chartCommandsEnabled
                     onTriggered: root.commands.chartTransformRequested(modelData.id)
                 }
             }
             AppMenuAction {
                 text: qsTrId("qml.normalize_whole_chart")
-                enabled: root.commandsEnabled && root.normalizationEnabled
+                enabled: root.commandsEnabled && root.chartCommandsEnabled
+                         && root.normalizationEnabled
                 onTriggered: root.commands.normalizeChartRequested()
             }
 
@@ -523,7 +532,7 @@ Item {
                         objectName: "adjustTransform_" + modelData.id
                         text: modelData.label
                         shortcutText: root.shortcuts.displayText(modelData.id)
-                        enabled: root.commandsEnabled
+                        enabled: root.commandsEnabled && root.chartCommandsEnabled
                         onTriggered: root.commands.chartTransformRequested(modelData.id)
                     }
                 }
@@ -541,13 +550,13 @@ Item {
             AppMenuAction {
                 text: qsTrId("action.preview_speed_down")
                 shortcutText: root.shortcuts.displayText("preview.speed_down", "Ctrl+O")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.chartCommandsEnabled
                 onTriggered: root.commands.previewRateStepRequested(-1)
             }
             AppMenuAction {
                 text: qsTrId("action.preview_speed_up")
                 shortcutText: root.shortcuts.displayText("preview.speed_up", "Ctrl+P")
-                enabled: root.commandsEnabled
+                enabled: root.commandsEnabled && root.chartCommandsEnabled
                 onTriggered: root.commands.previewRateStepRequested(1)
             }
             AppMenuSeparator {}

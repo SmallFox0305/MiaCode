@@ -375,6 +375,8 @@ private:
     std::function<void(std::function<void(bool)>)> qmlLeaveDocumentHandler_;
     std::function<bool(const QString&)> qmlChartTextHandler_;
     quint64 appliedQmlWorkspaceRevision_ = 0;
+    quint64 appliedDocumentOpenGeneration_ = 0;
+    bool resetWorkingPositionPending_ = false;
     // Borrowed from applicationServices_; never owned here.
     miacode::ApplicationServices& applicationServices_;
     miacode::EditorSyncController* editorSyncController_ = nullptr;

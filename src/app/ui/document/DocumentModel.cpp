@@ -79,9 +79,6 @@ DocumentModel::DocumentModel(
     connect(&metadataSaveTimer_, &QTimer::timeout, this, [this] {
         saveMetadataImmediately();
     });
-    if (!workspace_->snapshot().hasDocument) {
-        workspace_->openSource(SimaiDocument::createEmpty().toText());
-    }
     bridge()->setDocumentSaveHandler([this](const QString& path) {
         return saveToPath(path);
     });
@@ -92,9 +89,8 @@ DocumentModel::DocumentModel(
         setChartText(text);
         return chartText() == text;
     });
-    // The workspace already has a document from window startup, or a fresh empty
-    // chart opened above. Publish that first committed identity so later
-    // navigation values are stamped with the workspace revision.
+    // Publish the initial workspace identity, including the welcome state with
+    // no document, so later navigation values carry the workspace revision.
     refreshUnifiedDesignerState();
     publishWorkspaceCommit(WorkspaceCommitKind::Incremental);
     refreshDocumentState();
@@ -627,11 +623,16 @@ void DocumentModel::applyChartMediaImport(
 
 QString DocumentModel::documentTitle() const
 {
+    if (!hasDocument()) return QString();
     const QString title = documentField(miacode::ChartWorkspaceDocumentField::Title);
     const QString chartTitle = title.trimmed().isEmpty() ? currentFileName() : title;
     const QString difficulty = currentDifficultyId() > 0 ? currentDifficultyLabel() : QString();
     return difficulty.isEmpty() ? chartTitle
         : QStringLiteral("%1 — %2").arg(chartTitle, difficulty);
+}
+bool DocumentModel::hasDocument() const
+{
+    return workspace_ != nullptr && workspace_->snapshot().hasDocument;
 }
 QString DocumentModel::currentFilePath() const
 {
@@ -790,6 +791,10 @@ int DocumentModel::parsedNoteCount() const
     return validationSnapshot_.parsedNoteCount;
 }
 qulonglong DocumentModel::documentRevision() const { return presentationState_.documentRevision; }
+qulonglong DocumentModel::documentOpenGeneration() const
+{
+    return workspace_ != nullptr ? workspace_->snapshot().documentOpenGeneration : 0;
+}
 qulonglong DocumentModel::validationRevision() const { return presentationState_.validationRevision; }
 bool DocumentModel::validationPending() const { return presentationState_.validationPending; }
 bool DocumentModel::validationAvailable() const { return presentationState_.validationAvailable; }
@@ -806,6 +811,13 @@ qulonglong DocumentModel::bookmarkGeneration() const { return bookmarkGeneration
 QVariantList DocumentModel::recentDocuments()
 {
     return bridge() != nullptr ? bridge()->recentDocumentEntries() : QVariantList{};
+}
+
+void DocumentModel::removeRecentDocument(const QString& path)
+{
+    if (bridge() != nullptr) {
+        bridge()->removeRecentDocument(path);
+    }
 }
 
 QVariantList DocumentModel::backupDocuments()
@@ -965,7 +977,7 @@ void DocumentModel::createEmptyDocumentAt(const QString& targetPath)
 
 void DocumentModel::closeDocument()
 {
-    if (workspace_ == nullptr) return;
+    if (!hasDocument() || workspace_ == nullptr) return;
     if (!runWorkspaceMutation([&] { return workspace_->closeDocument().accepted; })) return;
     const bool wasUnified = unifiedDesignerEnabled_;
     unifiedDesignerEnabled_ = false;
@@ -975,7 +987,7 @@ void DocumentModel::closeDocument()
 
 bool DocumentModel::saveDifficultySection(int difficultyId)
 {
-    if (fileService_ == nullptr) return false;
+    if (!hasDocument() || fileService_ == nullptr) return false;
     if (!runWorkspaceMutation([&] { return fileService_->save(difficultyId).accepted; })) {
         emit operationFailed(qtTrId("document.save_failed"), qtTrId("document.cannot_write_chart"));
         return false;
@@ -1045,6 +1057,10 @@ void DocumentModel::requestLeaveCurrentField(std::function<void(bool)> onDecided
 void DocumentModel::saveSectionOrAskForPath(
     int difficultyId, std::function<void(bool)> onSaved)
 {
+    if (!hasDocument()) {
+        if (onSaved) onSaved(false);
+        return;
+    }
     emit editingFinishedRequested();
     const auto finish = [onSaved = std::move(onSaved)](bool saved) {
         if (onSaved) onSaved(saved);
@@ -1196,6 +1212,7 @@ int DocumentModel::saveSectionDifficultyId() const
 
 bool DocumentModel::save()
 {
+    if (!hasDocument()) return false;
     emit editingFinishedRequested();
     if (fileService_ == nullptr) return false;
     const int sectionId = saveSectionDifficultyId();
@@ -1212,6 +1229,7 @@ bool DocumentModel::save()
 
 bool DocumentModel::saveWholeDocument()
 {
+    if (!hasDocument()) return false;
     emit editingFinishedRequested();
     if (fileService_ == nullptr) return false;
     if (!runWorkspaceMutation([&] { return fileService_->save(0).accepted; })) {
@@ -1224,12 +1242,12 @@ bool DocumentModel::saveWholeDocument()
 }
 bool DocumentModel::saveAs(const QUrl& fileUrl)
 {
+    if (!hasDocument()) return false;
     emit editingFinishedRequested();
     const QString path = fileUrl.isLocalFile() ? fileUrl.toLocalFile() : fileUrl.toString();
     const bool saved = saveToPath(path);
     if (saved) {
         writeUnifiedDesignerPreference(currentFilePath(), unifiedDesignerEnabled_);
-        emitDocumentStateChanged();
     }
     return saved;
 }
@@ -1417,26 +1435,28 @@ void DocumentModel::publishWorkspaceCommit(
         ++documentGeneration_;
     }
     refreshUnifiedDesignerState();
-    emitDocumentStateChanged();
+    emitDocumentStateChanged(kind);
     if (replacement) emit documentReplaced();
 }
 
-void DocumentModel::emitDocumentStateChanged()
+void DocumentModel::emitDocumentStateChanged(WorkspaceCommitKind kind)
 {
     refreshDocumentState();
-    emit chartTextChanged();
-    emit metadataChanged();
-    emit unifiedDesignerEnabledChanged();
+    if (kind != WorkspaceCommitKind::SavePoint) {
+        emit chartTextChanged();
+        emit metadataChanged();
+        emit unifiedDesignerEnabledChanged();
+        emit currentDifficultyChanged();
+        emit difficultiesChanged();
+        emit currentDifficultyFieldsChanged();
+        ++bookmarkGeneration_;
+        emit bookmarksChanged();
+    }
     emit documentTitleChanged();
     emit currentFilePathChanged();
-    emit currentDifficultyChanged();
-    emit difficultiesChanged();
-    emit currentDifficultyFieldsChanged();
     emit dirtyChanged();
     emit dirtyEditorKeysChanged();
     emit syntaxIssuesChanged();
-    ++bookmarkGeneration_;
-    emit bookmarksChanged();
     emit documentStateChanged();
 }
 
@@ -1463,7 +1483,7 @@ void DocumentModel::refreshDocumentState()
 
 bool DocumentModel::saveToPath(const QString& path)
 {
-    if (fileService_ == nullptr || path.trimmed().isEmpty()) return false;
+    if (!hasDocument() || fileService_ == nullptr || path.trimmed().isEmpty()) return false;
     if (!runWorkspaceMutation([&] { return fileService_->saveAs(path, 0).accepted; })) {
         emit operationFailed(qtTrId("document.save_failed"), qtTrId("document.cannot_write_chart"));
         return false;
@@ -1476,7 +1496,7 @@ void DocumentModel::adoptBackendDocumentReplacement()
 {
     ++documentGeneration_;
     refreshUnifiedDesignerState();
-    emitDocumentStateChanged();
+    emitDocumentStateChanged(WorkspaceCommitKind::Open);
     emit documentReplaced();
 }
 

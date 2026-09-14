@@ -56,6 +56,9 @@ void CommandService::restoreBackupDocument(const QString& path)
 
 void CommandService::closeDocument()
 {
+    if (document_ == nullptr || !document_->hasDocument()) {
+        return;
+    }
     whenDocumentMayBeLeft([this]() { document_->closeDocument(); });
 }
 
