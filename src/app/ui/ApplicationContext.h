@@ -55,6 +55,7 @@ class ApplicationContext final : public QObject
     Q_PROPERTY(QObject* previewSettings READ previewSettings CONSTANT)
     Q_PROPERTY(QObject* latency READ latency CONSTANT)
     Q_PROPERTY(QObject* pet READ pet CONSTANT)
+    Q_PROPERTY(QObject* update READ update CONSTANT)
 
 public:
     // Stage 3.5 item 2 is complete here: the context takes the application
@@ -87,6 +88,7 @@ public:
     QObject* previewSettings();
     QObject* latency();
     QObject* pet();
+    QObject* update();
     void setWindowChrome(QObject* chrome);
     void setChartDropBridge(QObject* bridge);
 

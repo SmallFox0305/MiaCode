@@ -42,6 +42,7 @@ Qt 最低版本锁定：`6.8`
 | `Qt6::Quick3DHelpers` | 渲染 | 全平台 | `src/app/ui/pet/model/Fox.qml` 的 `ProceduralMesh`：狐狸的盒式几何体在运行时生成（8 处），不走预烘的 `.mesh` 资源 | 同 `Qt6::Quick3D` | 链接期；桌宠手工回归 |
 | `Qt6::Multimedia` | 媒体 | 全平台 | `QtPreviewSfxRuntime*`（判定音效）、`QVideoFrame` 桥接 | 预览首次播放 / 首帧解码 | 链接期；`HAVE_QT_MULTIMEDIA=1`；预览手工回归 |
 | `Qt6::MultimediaQuickPrivate` | 媒体 | `WIN32 OR APPLE OR Linux` | **不由 `src/` 直接使用**；仅供 `third_party/QtAVPlayer` 的 `QT_AVPLAYER_MULTIMEDIA` 桥编译 `QAVVideoFrame -> QVideoFrame` | 背景视频首帧解码 | 链接期；`qtavplayer_platform_spec`；本文「QtAVPlayer 媒体适配层」表 |
+| `Qt6::Network` | 更新检查 | 全平台 | `src/app/services/update/NetworkUpdateFetcher`：一次 HTTPS GET 取 GitHub Releases 上的更新 manifest。产品代码中没有第二处网络使用 | 启动后延迟约 8 秒的自动检查，或用户在偏好设置里手动点「立即检查」 | 链接期；`update_service_spec`（离线，注入假 fetcher）；HTTPS 可用性属打包验收（TLS 后端插件） |
 | `${QtAVPlayer_LIBS}` | 媒体 | `WIN32 OR APPLE`（需 `MIACODE_FFMPEG_DEV_DIR`）；Linux 用主机 pkg-config FFmpeg + libva | `PreviewStageMediaHost*`（PV/BG 解码）、`PreviewSharedD3D11Device`（D3D11VA 共享设备） | 背景视频首帧解码 | `qtavplayer_platform_spec`；macOS 打包契约 |
 | `PkgConfig::MIACODE_FFMPEG` | 媒体 | `Linux`（Win/macOS 改走 `MIACODE_FFMPEG_DEV_DIR` 的项目 SDK，见上一行） | QtAVPlayer 的解码依赖，由主机 pkg-config 提供：`libavfilter`、`libavcodec`、`libavformat`、`libavutil`、`libswresample`、`libswscale` | 背景视频首帧解码 | 链接期（Linux 构建）；`qtavplayer_platform_spec` |
 | `PkgConfig::MIACODE_VAAPI` | 媒体 | `Linux` | QtAVPlayer 在 Linux 的 VAAPI 硬件解码路径：`libva`、`libva-drm`、`libdrm` | 背景视频首帧解码（硬件解码可用时） | 链接期（Linux 构建）；`qtavplayer_platform_spec` |
@@ -82,7 +83,6 @@ Qt 最低版本锁定：`6.8`
 
 | 依赖 | 原因 | 归属 |
 | --- | --- | --- |
-| `Qt6::Network` | Net 页面已从 v2 产品运行时移除（见架构文档第 10 节）。引擎代码保留但**不进产品**，否则一个没有用户入口的依赖会被误当成产品依赖。 | `net_client_spec`（`src/tools/net/`，仅 `MIACODE_BUILD_DEV_TOOLS=ON` 时编译）。恢复 Net 页面时把本行移回允许表，并在允许表里写明入口与加载时机。 |
 | `Qt6::Test` | 只属于 dev-tools spec 可执行文件，不得进入产品进程。 | `MIACODE_BUILD_DEV_TOOLS` 分支下的各 spec target |
 | `Qt6::Svg` | 产品齿轮图标已迁移到 `src/app/ui/resources/icons/settings.svg`；产品 C++ target 不得直接编译或链接 Qt SVG。 | QML 资源的运行时 SVG plugin 是否随打包产物提供，另行按打包验收。 |
 | `Qt6::Widgets` | 产品页面、文档保存/离开确认和运行时辅助件已迁移到 QML/纯 Qt API；产品 target 不得重新引入 QWidget 生命周期。 | 仅允许遗留 dev-tool spec target 使用；重新进入 `MiaCode` 链接行视为回退。 |

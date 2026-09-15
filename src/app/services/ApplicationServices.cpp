@@ -30,5 +30,4 @@ ApplicationServices::ApplicationServices(QObject* parent)
     , shellNotifications_(this)
 {
 }
-
 }  // namespace miacode

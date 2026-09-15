@@ -1,5 +1,6 @@
 #include "ApplicationContext.h"
 
+#include "app/services/update/UpdateService.h"
 
 namespace miacode::ui {
 ApplicationContext::ApplicationContext(miacode::ApplicationServices& services,
@@ -97,6 +98,7 @@ QObject* ApplicationContext::previewSettings() { return &previewSettings_; }
 
 QObject* ApplicationContext::latency() { return &latency_; }
 QObject* ApplicationContext::pet() { return &pet_; }
+QObject* ApplicationContext::update() { return services_.updateService(); }
 
 void ApplicationContext::setWindowChrome(QObject* chrome)
 {

@@ -27,6 +27,11 @@ class PlaybackStateAuthority;
 class PreferencesStore;
 class DocumentBridge;
 
+namespace update {
+class UpdateFetcher;
+class UpdateService;
+} // namespace update
+
 // The parser validation locale matching the session UI language.
 //
 // This used to live in MainWindowShared, a QtWidgets translation unit, so
@@ -156,6 +161,20 @@ public:
 
     SimaiNativeValidationLocale validationLocale() const { return validationLocale_; }
 
+    // 更新检查的取数端口。真正触网的实现住在 QML/Bootstrap 层，因为这个
+    // 装配体只链 Qt6::Core 与 Qt6::Gui（见类注释）。
+    update::UpdateFetcher*& updateFetcherSlot() { return updateFetcher_; }
+    update::UpdateFetcher* updateFetcher() const { return updateFetcher_; }
+    void setUpdateFetcher(update::UpdateFetcher* fetcher) { updateFetcher_ = fetcher; }
+
+    // UpdateService 同样由 Bootstrap 构造后装进来。它本身只依赖两个抽象端口，
+    // 但它的生产实现会把 PreferenceDocument 拖进链接闭包，而本装配体的几个
+    // spec（application_services / export_engine / editor_page_router）只链
+    // Core 与 Gui，所以构造必须留在 Bootstrap 那一侧。
+    update::UpdateService*& updateServiceSlot() { return updateService_; }
+    update::UpdateService* updateService() const { return updateService_; }
+    void setUpdateService(update::UpdateService* service) { updateService_ = service; }
+
 private:
     // Declaration order is initialization order: workspace_ first, then
     // everything that binds to it.
@@ -180,6 +199,8 @@ private:
     PreferencesStore* preferencesStore_ = nullptr;
     DocumentBridge* documentBridge_ = nullptr;
     QObject* exportPageSession_ = nullptr;
+    update::UpdateFetcher* updateFetcher_ = nullptr;
+    update::UpdateService* updateService_ = nullptr;
 };
 
 }  // namespace miacode

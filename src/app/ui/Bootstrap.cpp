@@ -1,6 +1,12 @@
 #include "Bootstrap.h"
 
+#include "AppVersion.h"
 #include "ApplicationContext.h"
+#include "app/services/update/NetworkUpdateFetcher.h"
+#include "app/services/update/PreferenceUpdateStateStore.h"
+#include "app/services/update/UpdateManifest.h"
+#include "app/services/update/UpdateService.h"
+#include "app/ui/preferences/PreferenceDocument.h"
 #include "preview/NoteImageProvider.h"
 #include "export/CoverExportWindow.h"
 #include "chrome/PlatformChrome.h"
@@ -84,6 +90,20 @@ bool Bootstrap::start(const QString& startupOpenTarget)
     QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
 
     applicationServices_ = std::make_unique<miacode::ApplicationServices>();
+    // 更新检查在这里组装：ApplicationServices 只链 Core 与 Gui，而偏好存储的
+    // 生产实现会把 PreferenceDocument 拖进链接闭包，所以这两个具体实现由
+    // Bootstrap 持有，装配体那边只拿到抽象端口。
+    updateStateStore_ = std::make_unique<miacode::update::PreferenceUpdateStateStore>();
+    updateFetcher_ = std::make_unique<miacode::update::NetworkUpdateFetcher>(this);
+    miacode::update::UpdateEnvironment updateEnvironment;
+    updateEnvironment.versionText = QStringLiteral(MIACODE_VERSION_STRING);
+    updateEnvironment.major = MIACODE_VERSION_MAJOR;
+    updateEnvironment.platformKey = miacode::update::currentPlatformKey();
+    updateEnvironment.languageToken = PreferenceDocument::resolvedLanguageToken();
+    updateService_ = std::make_unique<miacode::update::UpdateService>(
+        *updateFetcher_, *updateStateStore_, std::move(updateEnvironment));
+    applicationServices_->setUpdateFetcher(updateFetcher_.get());
+    applicationServices_->setUpdateService(updateService_.get());
     backend_ = std::make_unique<Session>(*applicationServices_);
     backend_->setBackendActive(true);
     appendUiRuntimeLog(QStringLiteral("backend_ready"));
@@ -262,6 +282,10 @@ bool Bootstrap::start(const QString& startupOpenTarget)
         if (document != nullptr) {
             document->openFile(QUrl::fromLocalFile(startupOpenTarget.trimmed()));
         }
+    }
+
+    if (miacode::update::UpdateService* updates = applicationServices_->updateService()) {
+        updates->scheduleStartupCheck();
     }
 
     appendUiRuntimeLog(QStringLiteral("start_ok"));

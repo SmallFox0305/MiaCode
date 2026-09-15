@@ -843,6 +843,18 @@ qt_add_qml_module(MiaCode
         src/app/ui/Bootstrap.h
         src/app/ui/pet/PetOverlayController.cpp
         src/app/ui/pet/PetOverlayController.h
+        src/app/services/update/SemanticVersion.cpp
+        src/app/services/update/SemanticVersion.h
+        src/app/services/update/UpdateManifest.cpp
+        src/app/services/update/UpdateManifest.h
+        src/app/services/update/UpdateStateStore.h
+        src/app/services/update/UpdateFetcher.h
+        src/app/services/update/PreferenceUpdateStateStore.cpp
+        src/app/services/update/PreferenceUpdateStateStore.h
+        src/app/services/update/NetworkUpdateFetcher.cpp
+        src/app/services/update/NetworkUpdateFetcher.h
+        src/app/services/update/UpdateService.cpp
+        src/app/services/update/UpdateService.h
         src/app/ui/shell/RootLifecycle.h
         src/app/ui/timeline/TimelineThemeBridge.cpp
         src/app/ui/timeline/TimelineThemeBridge.h
@@ -915,6 +927,7 @@ set_target_properties(miniz PROPERTIES
 target_link_libraries(MiaCode PRIVATE
     Qt6::Core
     Qt6::Gui
+    Qt6::Network
     Qt6::Qml
     Qt6::Quick
     Qt6::Quick3D
