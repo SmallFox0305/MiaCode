@@ -384,11 +384,27 @@ def is_macho(path: Path) -> bool:
         return False
 
 
+def macho_files(app: Path) -> list[Path]:
+    seen: set[Path] = set()
+    files: list[Path] = []
+    for dirpath, _, names in os.walk(app):
+        for name in names:
+            path = Path(dirpath) / name
+            if path.is_symlink() or not is_macho(path):
+                continue
+            real = path.resolve()
+            if real in seen:
+                continue
+            seen.add(real)
+            files.append(path)
+    return files
+
+
 def thin_one(path: Path, arch: str) -> int:
     archs = subprocess.check_output(["lipo", "-archs", str(path)], text=True).split()
     if arch not in archs:
         raise RuntimeError(f"Mach-O is missing '{arch}': {path} (has: {' '.join(archs)})")
-    if archs == [arch]:
+    if len(archs) == 1:
         return 0
     handle, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".thin", dir=path.parent)
     os.close(handle)
@@ -408,7 +424,7 @@ def thin():
     arch = sys.argv[3]
     if not app.is_dir() or not app.name.endswith(".app"):
         raise RuntimeError(f"App bundle not found: {app}")
-    files = [Path(dirpath) / name for dirpath, _, names in os.walk(app) for name in names if is_macho(Path(dirpath) / name)]
+    files = macho_files(app)
     if not files:
         raise RuntimeError(f"No Mach-O binaries found in {app}")
     thinned = 0
