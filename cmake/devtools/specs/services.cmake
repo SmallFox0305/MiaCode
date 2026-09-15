@@ -569,3 +569,18 @@ miacode_add_spec(update_version_spec
     LIBS Qt6::Core
     INCLUDES src
 )
+
+miacode_add_spec(update_manifest_spec
+    OWNER src/app/services/update
+    CONTRACT v2.update-manifest
+    DOMAIN services KIND behavior RISK normal
+    EXECUTION ctest STATUS active PLATFORM all
+    SOURCES
+        src/tools/update/UpdateManifestSpec.cpp
+        src/app/services/update/UpdateManifest.cpp
+        src/app/services/update/UpdateManifest.h
+        src/app/services/update/SemanticVersion.cpp
+        src/app/services/update/SemanticVersion.h
+    LIBS Qt6::Core
+    INCLUDES src
+)

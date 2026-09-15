@@ -3,7 +3,7 @@
 Generated from `cmake/devtools/specs/` by `cmake -P cmake/devtools/SpecCatalog.cmake`.
 Check without writing: `cmake -DMIACODE_SPEC_CATALOG_CHECK=ON -P cmake/devtools/SpecCatalog.cmake`.
 
-119 independent specs; source lists and link dependencies are maintained only in CMake.
+120 independent specs; source lists and link dependencies are maintained only in CMake.
 All existing assertions and target/CTest names are retained. No bundles or retirements.
 
 `platform:all` means the target is registered on every platform, not that all platforms
@@ -126,6 +126,7 @@ Owners name production modules; kinds describe the checked boundary, not runtime
 | `src/tools/ui/V1ShellRemovalSpec.cpp` | `v1_shell_removal_spec` | `src/app/ui` | `qml-ui.v1-shell-removal` | ui | source-contract | normal | all | ctest | active |
 | `src/tools/ui_text/UiTextLocaleSpec.cpp` | `ui_text_locale_spec` | `src/app/ui` | `ui-text.ui-text-locale` | ui_text | behavior | normal | all | ctest | active |
 | `src/tools/ui_text/UiTextPreferencesSpec.cpp` | `ui_text_preferences_spec` | `src/app/ui` | `ui-text.ui-text-preferences` | ui_text | behavior | normal | all | ctest | active |
+| `src/tools/update/UpdateManifestSpec.cpp` | `update_manifest_spec` | `src/app/services/update` | `v2.update-manifest` | services | behavior | normal | all | ctest | active |
 | `src/tools/update/UpdateVersionSpec.cpp` | `update_version_spec` | `src/app/services/update` | `v2.update-version` | services | behavior | normal | all | ctest | active |
 | `src/tools/video_export/RawVideoPipeFrameConservationSpec.cpp` | `raw_video_pipe_frame_conservation_spec` | `src/tools/video_export` | `video-export.raw-video-pipe-frame-conservation` | video_export | behavior | high | all | ctest | active |
 | `src/tools/video_export/VideoExportAudioRenderPlanSpec.cpp` | `video_export_audio_render_plan_spec` | `src/tools/video_export` | `video-export.video-export-audio-render-plan` | video_export | behavior | high | all | ctest | active |
