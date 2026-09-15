@@ -556,3 +556,16 @@ miacode_add_spec(playback_storage_boundary_spec
         src/timeline
         src/tools/video_export
 )
+
+miacode_add_spec(update_version_spec
+    OWNER src/app/services/update
+    CONTRACT v2.update-version
+    DOMAIN services KIND behavior RISK normal
+    EXECUTION ctest STATUS active PLATFORM all
+    SOURCES
+        src/tools/update/UpdateVersionSpec.cpp
+        src/app/services/update/SemanticVersion.cpp
+        src/app/services/update/SemanticVersion.h
+    LIBS Qt6::Core
+    INCLUDES src
+)
