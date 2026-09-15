@@ -30,6 +30,16 @@ MACOS_BUILD_RECIPE = (
     "scripts/build/package-mac.sh",
     "scripts/build/thin-macos-app.sh",
 )
+MACOS_MEDIA_RECIPE = (
+    "scripts/ffmpeg/ensure-macos-ffmpeg.sh",
+    "scripts/ffmpeg/ensure-macos-ffmpeg-dev.sh",
+)
+WINDOWS_MEDIA_RECIPE = (
+    "scripts/ffmpeg/ensure-windows-ffmpeg.ps1",
+    "scripts/ffmpeg/ensure-windows-ffmpeg-dev.ps1",
+    "scripts/ffmpeg/trim",
+    "scripts/build/windows-toolchain.psd1",
+)
 # These change CI checks and job text, not the 7z payload.
 SOURCE_EXCLUDE = (
     "scripts/build/ci-package.py",
@@ -53,7 +63,7 @@ def tree(*paths, exclude=()):
         if not entry:
             continue
         path = entry.split(b"\t", 1)[1].decode()
-        if path in skipped:
+        if any(path == skip or path.startswith(skip + "/") for skip in skipped):
             continue
         kept.append(entry)
     return b"\0".join(kept) + b"\0" if kept else b""
@@ -71,19 +81,26 @@ def summary(message):
 
 
 def inputs():
+    excluded = SOURCE_EXCLUDE
+    if PLATFORM.startswith("windows-"):
+        media_paths = WINDOWS_MEDIA_RECIPE
+        build_paths = WINDOWS_BUILD_RECIPE
+        excluded += MACOS_BUILD_RECIPE + MACOS_MEDIA_RECIPE
+    elif PLATFORM == "macos-arm64":
+        media_paths = MACOS_MEDIA_RECIPE
+        build_paths = MACOS_BUILD_RECIPE
+        excluded += WINDOWS_BUILD_RECIPE + WINDOWS_MEDIA_RECIPE
+    else:
+        media_paths = ("scripts/ffmpeg",)
+        build_paths = ("scripts/build", ".github/workflows/package.yml")
     source = digest(tree("CMakeLists.txt", "CMakePresets.json", "cmake", "src",
                          "resources", "assets", "translations", "templates",
                          "third_party", "scripts", "licenses", "LICENSE",
                          "LICENSE_SCOPE.md", "THIRD_PARTY_NOTICES.md",
                          ".github/workflows/package.yml", ".gitmodules", ".gitattributes",
-                         exclude=SOURCE_EXCLUDE))
-    recipe = digest(tree("scripts/ffmpeg", "scripts/build/windows-toolchain.psd1"))
-    if PLATFORM.startswith("windows-"):
-        build_recipe = digest(tree(*WINDOWS_BUILD_RECIPE))
-    elif PLATFORM == "macos-arm64":
-        build_recipe = digest(tree(*MACOS_BUILD_RECIPE))
-    else:
-        build_recipe = digest(tree("scripts/build", ".github/workflows/package.yml"))
+                         exclude=excluded))
+    recipe = digest(tree(*media_paths))
+    build_recipe = digest(tree(*build_paths))
     toolchain = digest((recipe + build_recipe + os.environ.get("ImageOS", "") +
                         os.environ.get("ImageVersion", "")).encode())
     output(source=source, recipe=recipe, toolchain=toolchain)
