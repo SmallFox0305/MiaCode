@@ -7,6 +7,10 @@
 #include <QSysInfo>
 #include <QUrl>
 
+#include <cmath>
+#include <limits>
+#include <optional>
+
 namespace miacode::update {
 namespace {
 
@@ -18,11 +22,37 @@ ManifestParseResult failure(ManifestStatus status, const QString& reason)
     return result;
 }
 
+// 读一个必须是整数的字段。QJsonValue::toInt() 对小数或超出 int 范围的值直接
+// 返回默认值，而不是截断 —— 所以 "schema": 99.5 会被读成 0，从而绕过下面
+// 「版本过新就安静忽略」的闸门。必须自己确认它真的是个整数。
+std::optional<int> readWholeNumber(const QJsonValue& value)
+{
+    if (!value.isDouble()) {
+        return std::nullopt;
+    }
+    const double raw = value.toDouble();
+    if (!std::isfinite(raw) || raw != std::floor(raw)
+        || raw < static_cast<double>(std::numeric_limits<int>::min())
+        || raw > static_cast<double>(std::numeric_limits<int>::max())) {
+        return std::nullopt;
+    }
+    return static_cast<int>(raw);
+}
+
 PlatformPackage readPackage(const QJsonObject& entry)
 {
     PlatformPackage package;
     package.file = entry.value(QStringLiteral("file")).toString();
-    package.bytes = static_cast<qint64>(entry.value(QStringLiteral("bytes")).toDouble(0));
+    // 只接受一个正的、有限的、能安全落进 qint64 的字节数。其余一律记 0，
+    // 调用方对 0 的处理是「不显示大小」，比显示一个负数或未定义值要好。
+    package.bytes = 0;
+    const QJsonValue bytesValue = entry.value(QStringLiteral("bytes"));
+    if (bytesValue.isDouble()) {
+        const double raw = bytesValue.toDouble();
+        if (std::isfinite(raw) && raw > 0.0 && raw < 9.0e15) {
+            package.bytes = static_cast<qint64>(raw);
+        }
+    }
     package.sha256 = entry.value(QStringLiteral("sha256")).toString();
     package.url = entry.value(QStringLiteral("url")).toString();
     package.minOsVersion = entry.value(QStringLiteral("minOsVersion")).toString();
@@ -52,25 +82,25 @@ ManifestParseResult parseManifest(const QByteArray& payload,
     }
     const QJsonObject root = document.object();
 
-    const QJsonValue schemaValue = root.value(QStringLiteral("schema"));
-    if (!schemaValue.isDouble()) {
-        return failure(ManifestStatus::Invalid, QStringLiteral("manifest has no numeric schema"));
+    const std::optional<int> schema = readWholeNumber(root.value(QStringLiteral("schema")));
+    if (!schema.has_value()) {
+        return failure(ManifestStatus::Invalid, QStringLiteral("manifest has no integral schema"));
     }
-    if (schemaValue.toInt() > kSupportedManifestSchema) {
+    if (*schema > kSupportedManifestSchema) {
         return failure(ManifestStatus::NotApplicable,
                        QStringLiteral("manifest schema %1 is newer than this build understands")
-                           .arg(schemaValue.toInt()));
+                           .arg(*schema));
     }
 
-    const QJsonValue majorValue = root.value(QStringLiteral("major"));
-    if (!majorValue.isDouble()) {
-        return failure(ManifestStatus::Invalid, QStringLiteral("manifest has no numeric major"));
+    const std::optional<int> major = readWholeNumber(root.value(QStringLiteral("major")));
+    if (!major.has_value()) {
+        return failure(ManifestStatus::Invalid, QStringLiteral("manifest has no integral major"));
     }
-    if (majorValue.toInt() != selfMajor) {
+    if (*major != selfMajor) {
         // 版本族隔离：1.x 与 2.x 是两套独立应用，互不推送。
         return failure(ManifestStatus::NotApplicable,
                        QStringLiteral("manifest targets major %1, this build is major %2")
-                           .arg(majorValue.toInt()).arg(selfMajor));
+                           .arg(*major).arg(selfMajor));
     }
 
     const QString versionText = root.value(QStringLiteral("version")).toString();
@@ -102,18 +132,32 @@ ManifestParseResult parseManifest(const QByteArray& payload,
         return failure(ManifestStatus::NotApplicable,
                        QStringLiteral("no package for platform '%1'").arg(platformKey));
     }
+    const QJsonValue entryValue = platforms.value(platformKey);
+    if (!entryValue.isObject()) {
+        return failure(ManifestStatus::NotApplicable,
+                       QStringLiteral("no package for platform '%1': the entry is not an object")
+                           .arg(platformKey));
+    }
+    const PlatformPackage package = readPackage(entryValue.toObject());
+    if (package.file.isEmpty() || package.url.isEmpty()) {
+        // 条目在，但没有能用的东西 —— 与「本平台没有包」是同一回事，
+        // 不要谎报成一个可用的更新。
+        return failure(ManifestStatus::NotApplicable,
+                       QStringLiteral("no package for platform '%1': the entry has no file or url")
+                           .arg(platformKey));
+    }
 
     ManifestParseResult result;
     result.status = ManifestStatus::Ok;
     result.manifest.channel = root.value(QStringLiteral("channel")).toString();
-    result.manifest.major = majorValue.toInt();
+    result.manifest.major = *major;
     result.manifest.versionText = versionText;
     result.manifest.version = *version;
     result.manifest.releasedAt = root.value(QStringLiteral("releasedAt")).toString();
     result.manifest.releasePageUrl = releasePageUrl;
     result.manifest.mandatory = root.value(QStringLiteral("mandatory")).toBool(false);
     result.manifest.notes = selectNotes(root.value(QStringLiteral("notes")).toObject(), languageToken);
-    result.manifest.package = readPackage(platforms.value(platformKey).toObject());
+    result.manifest.package = package;
     return result;
 }
 

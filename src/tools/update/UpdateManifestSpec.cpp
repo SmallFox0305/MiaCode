@@ -123,6 +123,44 @@ int main(int argc, char** argv)
         ok &= expect(result.status == ManifestStatus::NotApplicable,
                      QStringLiteral("an unresolvable platform key is not applicable"), err);
     }
+    {
+        QJsonObject root = validManifest();
+        QJsonObject platforms = root.value(QStringLiteral("platforms")).toObject();
+        platforms.insert(mac, QStringLiteral("oops"));
+        root.insert(QStringLiteral("platforms"), platforms);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::NotApplicable,
+                     QStringLiteral("a platform entry that is a string is not applicable"), err);
+    }
+    {
+        QJsonObject root = validManifest();
+        QJsonObject platforms = root.value(QStringLiteral("platforms")).toObject();
+        platforms.insert(mac, QJsonValue());
+        root.insert(QStringLiteral("platforms"), platforms);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::NotApplicable,
+                     QStringLiteral("a platform entry that is null is not applicable"), err);
+    }
+    {
+        QJsonObject root = validManifest();
+        QJsonObject platforms = root.value(QStringLiteral("platforms")).toObject();
+        platforms.insert(mac, QJsonObject{});
+        root.insert(QStringLiteral("platforms"), platforms);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::NotApplicable,
+                     QStringLiteral("a platform entry that is an empty object is not applicable"), err);
+    }
+    {
+        QJsonObject root = validManifest();
+        QJsonObject platforms = root.value(QStringLiteral("platforms")).toObject();
+        platforms.insert(mac, QJsonObject{
+                              {QStringLiteral("file"), QStringLiteral("mac.7z")},
+                          });
+        root.insert(QStringLiteral("platforms"), platforms);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::NotApplicable,
+                     QStringLiteral("a platform entry with a file but no url is not applicable"), err);
+    }
 
     // ---- Invalid：结构坏了 ----
     {
@@ -170,12 +208,55 @@ int main(int argc, char** argv)
         ok &= expect(result.status == ManifestStatus::Invalid,
                      QStringLiteral("a manifest without a major is invalid"), err);
     }
+    {
+        QJsonObject root = validManifest();
+        root.insert(QStringLiteral("schema"), 99.5);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::Invalid,
+                     QStringLiteral("a non-integral schema is invalid, not silently coerced to 0"), err);
+    }
+    {
+        QJsonObject root = validManifest();
+        root.insert(QStringLiteral("schema"), 1.9);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::Invalid,
+                     QStringLiteral("a fractional schema is invalid, not truncated"), err);
+    }
+    {
+        QJsonObject root = validManifest();
+        root.insert(QStringLiteral("major"), 2.5);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::Invalid,
+                     QStringLiteral("a non-integral major is invalid, not a family mismatch"), err);
+    }
 
     // ---- 每条失败路径都要带上可写进日志的原因 ----
     {
         const auto result = parseManifest(QByteArray("not json"), 2, mac, QStringLiteral("zh_CN"));
         ok &= expect(!result.reason.isEmpty(),
                      QStringLiteral("a failure carries a loggable reason"), err);
+    }
+
+    // ---- bytes：类型错、越界或负数都要记 0，而不是相信或做未定义行为 ----
+    {
+        QJsonObject root = validManifest();
+        QJsonObject platforms = root.value(QStringLiteral("platforms")).toObject();
+        platforms.insert(mac, platformEntry(QStringLiteral("mac.7z"), -1000000));
+        root.insert(QStringLiteral("platforms"), platforms);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::Ok && result.manifest.package.bytes == 0,
+                     QStringLiteral("a negative byte count is dropped to 0, not kept negative"), err);
+    }
+    {
+        QJsonObject root = validManifest();
+        QJsonObject platforms = root.value(QStringLiteral("platforms")).toObject();
+        QJsonObject entry = platformEntry(QStringLiteral("mac.7z"), 84231168);
+        entry.insert(QStringLiteral("bytes"), QStringLiteral("84231168"));
+        platforms.insert(mac, entry);
+        root.insert(QStringLiteral("platforms"), platforms);
+        const auto result = parseManifest(toPayload(root), 2, mac, QStringLiteral("zh_CN"));
+        ok &= expect(result.status == ManifestStatus::Ok && result.manifest.package.bytes == 0,
+                     QStringLiteral("a byte count given as a JSON string is dropped to 0"), err);
     }
 
     if (ok) {
