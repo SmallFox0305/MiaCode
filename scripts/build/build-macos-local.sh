@@ -31,7 +31,7 @@ fi
 if [[ -z "$QT_ROOT" || ! -x "$QT_ROOT/bin/macdeployqt" ]]; then
   echo "No Qt $QT_VERSION found for the macOS build." >&2
   echo "Set QT_ROOT to a Qt $QT_VERSION macos directory, or install one with:" >&2
-  echo "  python3 -m aqt install-qt mac desktop $QT_VERSION clang_64 --outputdir .qt --modules qtmultimedia qtshadertools" >&2
+  echo "  python3 -m aqt install-qt mac desktop $QT_VERSION clang_64 --outputdir .qt --modules qtmultimedia qtshadertools qtquick3d" >&2
   exit 1
 fi
 

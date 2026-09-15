@@ -12,7 +12,7 @@ QT_OUTPUT_DIR="${QT_OUTPUT_DIR:-$ROOT_DIR/.qt}"
 # aqt's macOS module list does not expose every framework that ships in the
 # base desktop package. Keep the explicit add-on set minimal so the install
 # command stays valid across current mirrors.
-QT_MODULES="${QT_MODULES:-qtmultimedia qtshadertools}"
+QT_MODULES="${QT_MODULES:-qtmultimedia qtshadertools qtquick3d}"
 QT_DESKTOP_ARCH="${QT_DESKTOP_ARCH:-clang_64}"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-macos}"
 DEPLOYMENT_TARGET="${CMAKE_OSX_DEPLOYMENT_TARGET:-13.0}"
@@ -44,7 +44,7 @@ fi
 export PIP_DISABLE_PIP_VERSION_CHECK=1
 export PIP_NO_INPUT=1
 QT_MACDEPLOYQT="$QT_OUTPUT_DIR/$QT_VERSION/macos/bin/macdeployqt"
-if [[ ! -x "$QT_MACDEPLOYQT" ]]; then
+if [[ ! -x "$QT_MACDEPLOYQT" || ! -f "$QT_OUTPUT_DIR/$QT_VERSION/macos/lib/cmake/Qt6Quick3D/Qt6Quick3DConfig.cmake" ]]; then
   "$PYTHON_BIN" -m pip install --upgrade "aqtinstall==3.3.*" "py7zr==1.0.*"
   "$PYTHON_BIN" -m aqt install-qt mac desktop "$QT_VERSION" "$QT_DESKTOP_ARCH" \
     --outputdir "$QT_OUTPUT_DIR" \

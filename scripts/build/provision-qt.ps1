@@ -59,6 +59,13 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
 
 function Test-QtRootValid {
     param([string]$Path)
+    if ($Modules -contains "qtquick3d") {
+        foreach ($component in @("Qt6Quick3D", "Qt6Quick3DHelpers")) {
+            if (!(Test-Path (Join-Path $Path "lib\cmake\$component\${component}Config.cmake"))) {
+                return $false
+            }
+        }
+    }
     return (Test-Path (Join-Path $Path "lib\cmake\Qt6")) -and (Test-Path (Join-Path $Path "bin\windeployqt.exe"))
 }
 

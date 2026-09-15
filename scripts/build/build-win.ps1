@@ -80,7 +80,12 @@ function Test-QtRoot {
     if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path $Path)) {
         return $false
     }
-    return (Test-Path (Join-Path $Path "lib\cmake\Qt6")) -and (Test-Path (Join-Path $Path "bin\windeployqt.exe"))
+    foreach ($component in @("Qt6", "Qt6Quick3D", "Qt6Quick3DHelpers")) {
+        if (!(Test-Path (Join-Path $Path "lib\cmake\$component\${component}Config.cmake"))) {
+            return $false
+        }
+    }
+    return Test-Path (Join-Path $Path "bin\windeployqt.exe")
 }
 
 function Expand-QtCandidate {
@@ -175,7 +180,7 @@ if ($trimPreviewSdk) {
 if (![string]::IsNullOrWhiteSpace($QtRoot)) {
     $QtRoot = Resolve-RepoPath -RepoRoot $repoRoot -PathValue $QtRoot
     if (!(Test-QtRoot $QtRoot)) {
-        throw "Qt root '$QtRoot' does not contain lib\cmake\Qt6 and bin\windeployqt.exe."
+        throw "Qt root '$QtRoot' is missing required Qt components or bin\windeployqt.exe."
     }
     Write-Host "Qt: using -QtRoot $QtRoot"
 } else {

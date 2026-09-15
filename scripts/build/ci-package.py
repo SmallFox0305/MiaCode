@@ -103,7 +103,7 @@ def execute(*args):
 def verify_caches():
     prefix = "platform-v1-"
     expected = {
-        f"{prefix}qt-macos-arm64-6.11.1",
+        f"{prefix}qt-macos-arm64-6.11.1-quick3d",
         f"{prefix}media-macos-arm64-ffmpeg8.1.2-{os.environ['CI_RECIPE']}",
         f"{prefix}compiler-macos-arm64-{os.environ['CI_TOOLCHAIN']}-{os.environ['CI_SOURCE']}",
         f"{prefix}build-macos-arm64-{os.environ['CI_TOOLCHAIN']}-{os.environ['CI_SOURCE']}",

@@ -100,7 +100,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ matrix.qt }}
-          key: platform-v1-qt-${{ matrix.platform }}-6.11.1
+          key: platform-v1-qt-${{ matrix.platform }}-6.11.1-quick3d
 
       - name: Restore FFmpeg
         if: steps.package-cache.outputs.cache-hit != 'true'
@@ -150,7 +150,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ${{ matrix.qt }}
-          key: platform-v1-qt-${{ matrix.platform }}-6.11.1
+          key: platform-v1-qt-${{ matrix.platform }}-6.11.1-quick3d
 
       - name: Save macOS FFmpeg after build
         if: runner.os == 'macOS' && steps.macos-build.outcome == 'success' && steps.media-cache.outputs.cache-hit != 'true'

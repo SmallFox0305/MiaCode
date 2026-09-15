@@ -6,7 +6,7 @@
 @{
     Qt = @{
         Version = '6.11.1'
-        Modules = @('qtmultimedia', 'qtshadertools')
+        Modules = @('qtmultimedia', 'qtshadertools', 'qtquick3d')
         # Probed in order before any download. {version} and {archdir} expand
         # per selected toolchain. A candidate must contain lib\cmake\Qt6 and
         # bin\windeployqt.exe to be accepted.
