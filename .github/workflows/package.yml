@@ -65,6 +65,7 @@ jobs:
       MIACODE_PACKAGE_JOBS: "4"
       MIACODE_FFMPEG_BUILD_JOBS: "4"
       CI_PLATFORM: ${{ matrix.platform }}
+      CI_MEDIA_VERSION: ${{ matrix.version }}
       CI_ESTIMATE: ${{ matrix.estimate }}
     steps:
       - name: Start timing
@@ -109,6 +110,7 @@ jobs:
         with:
           path: ${{ matrix.media }}
           key: platform-v1-media-${{ matrix.platform }}-${{ matrix.version }}-${{ steps.inputs.outputs.recipe }}
+          restore-keys: ${{ steps.inputs.outputs.media_restore }}
 
       - name: Restore compiler outputs
         if: steps.package-cache.outputs.cache-hit != 'true'
@@ -117,7 +119,9 @@ jobs:
         with:
           path: .cache/sccache
           key: platform-v1-compiler-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-${{ steps.inputs.outputs.source }}
-          restore-keys: platform-v1-compiler-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-
+          restore-keys: |
+            platform-v1-compiler-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-
+            platform-v1-compiler-${{ matrix.platform }}-
 
       - name: Restore build directory
         if: steps.package-cache.outputs.cache-hit != 'true'
@@ -126,7 +130,9 @@ jobs:
         with:
           path: ${{ matrix.build }}
           key: platform-v1-build-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-${{ steps.inputs.outputs.source }}
-          restore-keys: platform-v1-build-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-
+          restore-keys: |
+            platform-v1-build-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-
+            ${{ steps.inputs.outputs.build_restore }}
 
       - name: Set up compiler cache
         if: steps.package-cache.outputs.cache-hit != 'true'

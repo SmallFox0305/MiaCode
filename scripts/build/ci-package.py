@@ -4,6 +4,7 @@
 import hashlib
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import struct
@@ -21,7 +22,6 @@ PLATFORM = os.environ.get("CI_PLATFORM", "")
 # be reused; they must not rotate this prefix.
 WINDOWS_BUILD_RECIPE = (
     "scripts/build/build-win.ps1",
-    "scripts/build/package-win.ps1",
     "scripts/build/provision-qt.ps1",
     "scripts/build/windows-toolchain.psd1",
 )
@@ -51,10 +51,10 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def tree(*paths, exclude=()):
+def tree(*paths, exclude=(), revision="HEAD"):
     # Git object IDs cover LFS pointers and submodule commits before downloads.
     # Generated SDKs/build outputs never enter the source identity.
-    data = subprocess.check_output(["git", "ls-tree", "-r", "-z", "HEAD", "--", *paths])
+    data = subprocess.check_output(["git", "ls-tree", "-r", "-z", revision, "--", *paths])
     if not exclude:
         return data
     skipped = set(exclude)
@@ -72,7 +72,10 @@ def tree(*paths, exclude=()):
 def output(**values):
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
         for key, value in values.items():
-            stream.write(f"{key}={value}\n")
+            if "\n" in value:
+                stream.write(f"{key}<<CACHE_KEYS\n{value}\nCACHE_KEYS\n")
+            else:
+                stream.write(f"{key}={value}\n")
 
 
 def summary(message):
@@ -80,30 +83,86 @@ def summary(message):
         stream.write(message + "\n")
 
 
+def windows_section(name, revision):
+    data = subprocess.check_output([
+        "git", "show", f"{revision}:scripts/build/windows-toolchain.psd1"])
+    match = re.search(rb"(?ms)^    " + name.encode() + rb" = @\{.*?^    \}", data)
+    if match is None:
+        raise RuntimeError(f"Missing Windows toolchain section: {name}")
+    return match.group()
+
+
+def cache_inputs(revision="HEAD"):
+    if PLATFORM.startswith("windows-"):
+        media_paths = WINDOWS_MEDIA_RECIPE[:-1]
+        if PLATFORM == "windows-arm64":
+            media_paths = media_paths[:-1]  # The trim toolchain builds x64 only.
+        media = tree(*media_paths, revision=revision) + windows_section("FFmpeg", revision)
+        build = tree("scripts/build/build-win.ps1", "scripts/build/provision-qt.ps1",
+                     revision=revision)
+        build += windows_section("Qt", revision) + windows_section("Toolchains", revision)
+    elif PLATFORM == "macos-arm64":
+        media = tree(*MACOS_MEDIA_RECIPE, revision=revision)
+        build = tree(*MACOS_BUILD_RECIPE, revision=revision)
+    else:
+        media = tree("scripts/ffmpeg", revision=revision)
+        build = tree("scripts/build", revision=revision)
+    return digest(media), digest(build)
+
+
+def legacy_cache_keys(recipe, build_recipe, image):
+    # Migrate compatible caches from the two pre-isolation recipes.
+    # Compare actual dependency/build inputs before admitting a legacy key.
+    media_keys, build_keys = [], []
+    for revision in ("a269c7700a6b7832e34a13fb148b2cbf6cd49840",
+                     "24e2ebc42ae8bf29c838335ebaa639a009f97a5a"):
+        exists = subprocess.run(["git", "cat-file", "-e", revision],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if exists.returncode:
+            fetched = subprocess.run(["git", "fetch", "--no-tags", "--depth=1", "origin", revision],
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if fetched.returncode:
+                continue
+        old_media, old_build = cache_inputs(revision)
+        if old_media != recipe:
+            continue
+        old_recipe = digest(tree("scripts/ffmpeg", "scripts/build/windows-toolchain.psd1",
+                                 revision=revision))
+        media_key = f"platform-v1-media-{PLATFORM}-{os.environ['CI_MEDIA_VERSION']}-{old_recipe}"
+        if media_key not in media_keys:
+            media_keys.append(media_key)
+        if old_build != build_recipe:
+            continue
+        paths = (("scripts/build/build-win.ps1", "scripts/build/package-win.ps1",
+                  "scripts/build/provision-qt.ps1", "scripts/build/windows-toolchain.psd1")
+                 if PLATFORM.startswith("windows-") else MACOS_BUILD_RECIPE)
+        old_toolchain = digest((old_recipe + digest(tree(*paths, revision=revision)) + image).encode())
+        build_key = f"platform-v1-build-{PLATFORM}-{old_toolchain}-"
+        if build_key not in build_keys:
+            build_keys.append(build_key)
+    return "\n".join(media_keys), "\n".join(build_keys)
+
+
 def inputs():
     excluded = SOURCE_EXCLUDE
     if PLATFORM.startswith("windows-"):
-        media_paths = WINDOWS_MEDIA_RECIPE
-        build_paths = WINDOWS_BUILD_RECIPE
         excluded += MACOS_BUILD_RECIPE + MACOS_MEDIA_RECIPE
+        if PLATFORM == "windows-arm64":
+            excluded += ("scripts/ffmpeg/trim",)
     elif PLATFORM == "macos-arm64":
-        media_paths = MACOS_MEDIA_RECIPE
-        build_paths = MACOS_BUILD_RECIPE
-        excluded += WINDOWS_BUILD_RECIPE + WINDOWS_MEDIA_RECIPE
-    else:
-        media_paths = ("scripts/ffmpeg",)
-        build_paths = ("scripts/build", ".github/workflows/package.yml")
+        excluded += WINDOWS_BUILD_RECIPE + WINDOWS_MEDIA_RECIPE + ("scripts/build/package-win.ps1",)
     source = digest(tree("CMakeLists.txt", "CMakePresets.json", "cmake", "src",
                          "resources", "assets", "translations", "templates",
                          "third_party", "scripts", "licenses", "LICENSE",
                          "LICENSE_SCOPE.md", "THIRD_PARTY_NOTICES.md",
                          ".github/workflows/package.yml", ".gitmodules", ".gitattributes",
                          exclude=excluded))
-    recipe = digest(tree(*media_paths))
-    build_recipe = digest(tree(*build_paths))
-    toolchain = digest((recipe + build_recipe + os.environ.get("ImageOS", "") +
-                        os.environ.get("ImageVersion", "")).encode())
-    output(source=source, recipe=recipe, toolchain=toolchain)
+    recipe, build_recipe = cache_inputs()
+    image = os.environ.get("ImageOS", "") + os.environ.get("ImageVersion", "")
+    toolchain = digest((recipe + build_recipe + image).encode())
+    media_restore, build_restore = legacy_cache_keys(recipe, build_recipe, image)
+    output(source=source, recipe=recipe, toolchain=toolchain,
+           media_restore=media_restore, build_restore=build_restore)
 
 
 def archive():
