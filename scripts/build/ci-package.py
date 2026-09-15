@@ -11,8 +11,6 @@ import struct
 import subprocess
 import sys
 import time
-import urllib.parse
-import urllib.request
 
 
 DIST = Path("dist")
@@ -51,10 +49,10 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def tree(*paths, exclude=(), revision="HEAD"):
+def tree(*paths, exclude=()):
     # Git object IDs cover LFS pointers and submodule commits before downloads.
     # Generated SDKs/build outputs never enter the source identity.
-    data = subprocess.check_output(["git", "ls-tree", "-r", "-z", revision, "--", *paths])
+    data = subprocess.check_output(["git", "ls-tree", "-r", "-z", "HEAD", "--", *paths])
     if not exclude:
         return data
     skipped = set(exclude)
@@ -72,10 +70,7 @@ def tree(*paths, exclude=(), revision="HEAD"):
 def output(**values):
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
         for key, value in values.items():
-            if "\n" in value:
-                stream.write(f"{key}<<CACHE_KEYS\n{value}\nCACHE_KEYS\n")
-            else:
-                stream.write(f"{key}={value}\n")
+            stream.write(f"{key}={value}\n")
 
 
 def summary(message):
@@ -83,64 +78,29 @@ def summary(message):
         stream.write(message + "\n")
 
 
-def windows_section(name, revision):
-    data = subprocess.check_output([
-        "git", "show", f"{revision}:scripts/build/windows-toolchain.psd1"])
+def windows_section(name):
+    data = subprocess.check_output(["git", "show", "HEAD:scripts/build/windows-toolchain.psd1"])
     match = re.search(rb"(?ms)^    " + name.encode() + rb" = @\{.*?^    \}", data)
     if match is None:
         raise RuntimeError(f"Missing Windows toolchain section: {name}")
     return match.group()
 
 
-def cache_inputs(revision="HEAD"):
+def cache_inputs():
     if PLATFORM.startswith("windows-"):
         media_paths = WINDOWS_MEDIA_RECIPE[:-1]
         if PLATFORM == "windows-arm64":
-            media_paths = media_paths[:-1]  # The trim toolchain builds x64 only.
-        media = tree(*media_paths, revision=revision) + windows_section("FFmpeg", revision)
-        build = tree("scripts/build/build-win.ps1", "scripts/build/provision-qt.ps1",
-                     revision=revision)
-        build += windows_section("Qt", revision) + windows_section("Toolchains", revision)
+            media_paths = media_paths[:-1]
+        media = tree(*media_paths) + windows_section("FFmpeg")
+        build = tree("scripts/build/build-win.ps1", "scripts/build/provision-qt.ps1")
+        build += windows_section("Qt") + windows_section("Toolchains")
     elif PLATFORM == "macos-arm64":
-        media = tree(*MACOS_MEDIA_RECIPE, revision=revision)
-        build = tree(*MACOS_BUILD_RECIPE, revision=revision)
+        media = tree(*MACOS_MEDIA_RECIPE)
+        build = tree(*MACOS_BUILD_RECIPE)
     else:
-        media = tree("scripts/ffmpeg", revision=revision)
-        build = tree("scripts/build", revision=revision)
+        media = tree("scripts/ffmpeg")
+        build = tree("scripts/build")
     return digest(media), digest(build)
-
-
-def legacy_cache_keys(recipe, build_recipe, image):
-    # Migrate compatible caches from the two pre-isolation recipes.
-    # Compare actual dependency/build inputs before admitting a legacy key.
-    media_keys, build_keys = [], []
-    for revision in ("a269c7700a6b7832e34a13fb148b2cbf6cd49840",
-                     "24e2ebc42ae8bf29c838335ebaa639a009f97a5a"):
-        exists = subprocess.run(["git", "cat-file", "-e", revision],
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if exists.returncode:
-            fetched = subprocess.run(["git", "fetch", "--no-tags", "--depth=1", "origin", revision],
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if fetched.returncode:
-                continue
-        old_media, old_build = cache_inputs(revision)
-        if old_media != recipe:
-            continue
-        old_recipe = digest(tree("scripts/ffmpeg", "scripts/build/windows-toolchain.psd1",
-                                 revision=revision))
-        media_key = f"platform-v1-media-{PLATFORM}-{os.environ['CI_MEDIA_VERSION']}-{old_recipe}"
-        if media_key not in media_keys:
-            media_keys.append(media_key)
-        if old_build != build_recipe:
-            continue
-        paths = (("scripts/build/build-win.ps1", "scripts/build/package-win.ps1",
-                  "scripts/build/provision-qt.ps1", "scripts/build/windows-toolchain.psd1")
-                 if PLATFORM.startswith("windows-") else MACOS_BUILD_RECIPE)
-        old_toolchain = digest((old_recipe + digest(tree(*paths, revision=revision)) + image).encode())
-        build_key = f"platform-v1-build-{PLATFORM}-{old_toolchain}-"
-        if build_key not in build_keys:
-            build_keys.append(build_key)
-    return "\n".join(media_keys), "\n".join(build_keys)
 
 
 def inputs():
@@ -158,11 +118,9 @@ def inputs():
                          ".github/workflows/package.yml", ".gitmodules", ".gitattributes",
                          exclude=excluded))
     recipe, build_recipe = cache_inputs()
-    image = os.environ.get("ImageOS", "") + os.environ.get("ImageVersion", "")
-    toolchain = digest((recipe + build_recipe + image).encode())
-    media_restore, build_restore = legacy_cache_keys(recipe, build_recipe, image)
-    output(source=source, recipe=recipe, toolchain=toolchain,
-           media_restore=media_restore, build_restore=build_restore)
+    toolchain = digest((recipe + build_recipe + os.environ.get("ImageOS", "") +
+                        os.environ.get("ImageVersion", "")).encode())
+    output(source=source, recipe=recipe, toolchain=toolchain)
 
 
 def archive():
@@ -174,35 +132,6 @@ def archive():
 
 def execute(*args):
     subprocess.run([str(arg) for arg in args], check=True, timeout=120)
-
-
-def verify_caches():
-    prefix = "platform-v1-"
-    expected = {
-        f"{prefix}qt-macos-arm64-6.11.1-quick3d",
-        f"{prefix}media-macos-arm64-ffmpeg8.1.2-{os.environ['CI_RECIPE']}",
-        f"{prefix}compiler-macos-arm64-{os.environ['CI_TOOLCHAIN']}-{os.environ['CI_SOURCE']}",
-        f"{prefix}build-macos-arm64-{os.environ['CI_TOOLCHAIN']}-{os.environ['CI_SOURCE']}",
-    }
-    page = 1
-    found = set()
-    while True:
-        query = urllib.parse.urlencode(dict(ref=os.environ["GITHUB_REF"], key=prefix,
-                                           per_page=100, page=page))
-        url = (f"{os.environ['GITHUB_API_URL']}/repos/{os.environ['GITHUB_REPOSITORY']}"
-               f"/actions/caches?{query}")
-        request = urllib.request.Request(url, headers={
-            "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
-            "Accept": "application/vnd.github+json",
-        })
-        with urllib.request.urlopen(request, timeout=30) as response:
-            caches = json.load(response)["actions_caches"]
-        found.update(c["key"] for c in caches if c["size_in_bytes"] > 0)
-        if expected <= found or len(caches) < 100:
-            break
-        page += 1
-    if expected - found:
-        raise RuntimeError(f"Saved caches missing: {sorted(expected - found)}")
 
 
 def verify():
@@ -297,6 +226,5 @@ def report():
 
 
 if __name__ == "__main__":
-    commands = {"inputs": inputs, "verify": verify, "check": check, "report": report,
-                "verify-caches": verify_caches}
+    commands = {"inputs": inputs, "verify": verify, "check": check, "report": report}
     commands[sys.argv[1]]()
