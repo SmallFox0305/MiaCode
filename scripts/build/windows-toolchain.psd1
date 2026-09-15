@@ -114,22 +114,22 @@
         QtRuntimeDllBaseNames = @(
             'Qt6Core', 'Qt6Gui', 'Qt6Multimedia',
             'Qt6Network', 'Qt6OpenGL', 'Qt6Quick', 'Qt6Qml', 'Qt6QmlMeta', 'Qt6QmlModels',
-            'Qt6QmlWorkerScript', 'Qt6QuickControls2', 'Qt6Svg'
+            'Qt6QmlWorkerScript', 'Qt6QuickControls2', 'Qt6Svg',
+            'Qt6Quick3D', 'Qt6Quick3DRuntimeRender', 'Qt6Quick3DUtils'
         )
         # Removed after deployment: the app does not link them.
-        DeprecatedQtRuntimeDllBaseNames = @('Qt6OpenGLWidgets', 'Qt6Concurrent')
+        DeprecatedQtRuntimeDllBaseNames = @('Qt6OpenGLWidgets')
         # Removed after deployment: the app pins QQuickStyle::setStyle("Basic")
         # (src/app/main.cpp) and its QML imports only QtQuick.Controls /
         # QtQuick.Controls.impl, so the other Controls styles are dead weight.
-        # Qt6Quick3DUtils is imported only by the qmltooling Quick3D profiler,
-        # and FolderListModel is unused by the QML tree.
+        # FolderListModel is unused by the QML tree.
         UnusedQtRuntimeDllBaseNames = @(
             'Qt6QuickControls2Fusion', 'Qt6QuickControls2Imagine',
             'Qt6QuickControls2Material', 'Qt6QuickControls2Universal',
             'Qt6QuickControls2FusionStyleImpl', 'Qt6QuickControls2ImagineStyleImpl',
             'Qt6QuickControls2MaterialStyleImpl', 'Qt6QuickControls2UniversalStyleImpl',
             'Qt6QuickControls2FluentWinUI3StyleImpl', 'Qt6QuickControls2WindowsStyleImpl',
-            'Qt6Quick3DUtils', 'Qt6LabsFolderListModel',
+            'Qt6LabsFolderListModel',
             # Qt6Widgets is a dev-tools-only dependency (see CMakeLists.txt); no
             # packaged PE imports it, so shipping it was 6.9 MB of dead weight.
             'Qt6Widgets'
@@ -183,6 +183,7 @@
             'app-qt:Qt6Network', 'app-qt:Qt6OpenGL', 'app-qt:Qt6Quick', 'app-qt:Qt6Qml',
             'app-qt:Qt6QmlMeta', 'app-qt:Qt6QmlModels', 'app-qt:Qt6QmlWorkerScript',
             'app-qt:Qt6QuickControls2', 'app-qt:Qt6Svg',
+            'app-qt:Qt6Quick3D', 'app-qt:Qt6Quick3DRuntimeRender', 'app-qt:Qt6Quick3DUtils',
             'app\bass.dll', 'app\bassmix.dll', 'app\bass_fx.dll',
             'app\bassopus.dll',
             'app\platforms\qwindows.dll',
