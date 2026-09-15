@@ -16,6 +16,25 @@ bool isNumericIdentifier(const QString& identifier)
             return false;
         }
     }
+    // 前导零不是合法的数字标识符（"0" 本身允许）。
+    if (identifier.size() > 1 && identifier.startsWith(QLatin1Char('0'))) {
+        return false;
+    }
+    return true;
+}
+
+// 全是数字字符，不管有没有前导零。用来判断一个标识符"本该"走数值比较，
+// 从而在 parse() 里把不合法的数字段（前导零、溢出 int）拒之门外。
+bool isDigitsOnly(const QString& identifier)
+{
+    if (identifier.isEmpty()) {
+        return false;
+    }
+    for (const QChar c : identifier) {
+        if (!c.isDigit()) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -56,6 +75,7 @@ int compareIdentifier(const QString& lhs, const QString& rhs)
     const bool leftNumeric = isNumericIdentifier(lhs);
     const bool rightNumeric = isNumericIdentifier(rhs);
     if (leftNumeric && rightNumeric) {
+        // parse() 保证数字标识符不溢出 int，所以这里的 toInt() 无需再查 ok。
         const int left = lhs.toInt();
         const int right = rhs.toInt();
         if (left == right) {
@@ -118,6 +138,18 @@ std::optional<SemanticVersion> SemanticVersion::parse(const QString& text)
         for (const QString& identifier : identifiers) {
             if (!isValidIdentifier(identifier)) {
                 return std::nullopt;
+            }
+            if (isDigitsOnly(identifier)) {
+                // 数字标识符必须无前导零，且必须能真的参与数值比较。放行一个
+                // 溢出 int 的标识符会让 compare() 把它当成 0，从而把顺序判反。
+                if (!isNumericIdentifier(identifier)) {
+                    return std::nullopt;
+                }
+                bool fits = false;
+                identifier.toInt(&fits);
+                if (!fits) {
+                    return std::nullopt;
+                }
             }
         }
         version.prerelease = identifiers;

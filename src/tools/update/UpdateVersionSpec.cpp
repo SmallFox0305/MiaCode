@@ -54,6 +54,19 @@ int main(int argc, char** argv)
     ok &= expect(built.has_value() && built->prerelease == QStringList{QStringLiteral("alpha")},
                  QStringLiteral("build metadata is discarded"), err);
 
+    const auto upperV = SemanticVersion::parse(QStringLiteral("V2.0.0"));
+    ok &= expect(upperV.has_value() && upperV->major == 2 && upperV->minor == 0 && upperV->patch == 0,
+                 QStringLiteral("an uppercase leading V is accepted just like lowercase v"), err);
+
+    const auto maxIdentifier = SemanticVersion::parse(QStringLiteral("2.0.0-2147483647"));
+    ok &= expect(maxIdentifier.has_value()
+                     && maxIdentifier->prerelease == QStringList{QStringLiteral("2147483647")},
+                 QStringLiteral("a numeric identifier at INT_MAX still parses"), err);
+
+    const auto zeroIdentifier = SemanticVersion::parse(QStringLiteral("2.0.0-0"));
+    ok &= expect(zeroIdentifier.has_value() && zeroIdentifier->prerelease == QStringList{QStringLiteral("0")},
+                 QStringLiteral("a bare zero numeric identifier is legal"), err);
+
     // ---- 解析失败：一律 nullopt，绝不猜 ----
     for (const QString& bad : {QStringLiteral(""),
                                QStringLiteral("2.0"),
@@ -62,7 +75,12 @@ int main(int argc, char** argv)
                                QStringLiteral("2.0.0-"),
                                QStringLiteral("2.0.0-beta..1"),
                                QStringLiteral("-1.0.0"),
-                               QStringLiteral("nightly")}) {
+                               QStringLiteral("nightly"),
+                               QStringLiteral("2.0.0-99999999999999999999"),
+                               QStringLiteral("2.0.0-2147483648"),
+                               QStringLiteral("2.01.0"),
+                               QStringLiteral("2.0.0-01"),
+                               QStringLiteral("2.0.0-０")}) {
         ok &= expect(!SemanticVersion::parse(bad).has_value(),
                      QStringLiteral("malformed version is rejected: '%1'").arg(bad), err);
     }
