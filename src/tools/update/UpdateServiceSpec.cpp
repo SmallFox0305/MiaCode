@@ -220,6 +220,27 @@ int main(int argc, char** argv)
                      QStringLiteral("a failed check is recorded as an error"), err);
     }
     {
+        // 先成功找到一个更新，再让同一个 fetcher 转为失败：失败信号不能带着
+        // 上一次找到的版本，但状态栏标记本身必须原样留着。
+        FakeFetcher fetcher;
+        MemoryStore store;
+        fetcher.nextPayload = manifestPayload(QStringLiteral("2.1.0"));
+        UpdateService service(fetcher, store, testEnvironment());
+        service.checkNow(true);
+
+        fetcher.nextOk = false;
+        fetcher.nextReason = QStringLiteral("host unreachable");
+        QSignalSpy reportedAgain(&service, &UpdateService::manualCheckFinished);
+        service.checkNow(true);
+        ok &= expect(reportedAgain.count() == 1
+                         && reportedAgain.first().at(0).toString() == QLatin1String("failed")
+                         && reportedAgain.first().at(1).toMap().value(QStringLiteral("version")).toString().isEmpty(),
+                     QStringLiteral("a failed check does not report the previous find's version as its own result"),
+                     err);
+        ok &= expect(service.updateAvailable(),
+                     QStringLiteral("a transient failure does not clear the status-bar badge"), err);
+    }
+    {
         FakeFetcher fetcher;
         MemoryStore store;
         fetcher.nextPayload = QByteArray("not json");
@@ -270,6 +291,19 @@ int main(int argc, char** argv)
         service.checkNow(false);
         ok &= expect(fetcher.fetchCount == 1,
                      QStringLiteral("after a failure the window is 4h, so 5h later retries"), err);
+    }
+    {
+        // 存下来的时间在未来（时钟被改过又调回来之类）：按窗口算永远算不出
+        // 「已经过了窗口」，节流会一直卡死。必须把它当成「窗口已过」处理。
+        FakeFetcher fetcher;
+        MemoryStore store;
+        store.checkedAt = QDateTime::currentDateTimeUtc().addSecs(3600);
+        store.outcome = QStringLiteral("ok");
+        fetcher.nextPayload = manifestPayload(QStringLiteral("2.1.0"));
+        UpdateService service(fetcher, store, testEnvironment());
+        service.checkNow(false);
+        ok &= expect(fetcher.fetchCount == 1,
+                     QStringLiteral("a stored check time in the future does not wedge automatic checks"), err);
     }
     {
         FakeFetcher fetcher;
@@ -344,6 +378,18 @@ int main(int argc, char** argv)
         ok &= expect(fetcher.fetchCount == 0,
                      QStringLiteral("restoring the known version does not touch the network"), err);
     }
+    {
+        // 已知陷阱回归测试：known 和 skipped 是同一个版本时，「先清 skipped 再
+        // 读 known」的顺序必须保住——用户已经跳过的版本不该在下次启动时又亮起来。
+        FakeFetcher fetcher;
+        MemoryStore store;
+        store.known = QStringLiteral("2.1.0");
+        store.skipped = QStringLiteral("2.1.0");
+        UpdateService service(fetcher, store, testEnvironment());
+        ok &= expect(!service.updateAvailable(),
+                     QStringLiteral("a version already skipped by the user does not light the badge on the next launch"),
+                     err);
+    }
 
     // ---- 并发保护 ----
     {
@@ -362,6 +408,27 @@ int main(int argc, char** argv)
         service.checkNow(true);
         ok &= expect(fetcher.fetchCount == 1,
                      QStringLiteral("a second check while one is in flight is dropped"), err);
+    }
+    {
+        // 端口没有承诺回调只来一次；这里模拟一个（错误地）调用两次的实现，
+        // 照 NeverCallsBack 的形状写，只是方向相反。
+        class CallsBackTwice final : public UpdateFetcher
+        {
+        public:
+            void fetch(const QUrl&, Callback callback) override
+            {
+                callback(true, payload, QString());
+                callback(true, payload, QString());
+            }
+            QByteArray payload;
+        };
+        CallsBackTwice fetcher;
+        fetcher.payload = manifestPayload(QStringLiteral("2.1.0"));
+        MemoryStore store;
+        UpdateService service(fetcher, store, testEnvironment());
+        service.checkNow(true);
+        ok &= expect(store.recordCount == 1,
+                     QStringLiteral("a fetcher that calls its callback twice does not double-record the check"), err);
     }
 
     if (ok) {

@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QLocale>
+#include <QPointer>
 #include <QTimer>
 #include <QUrl>
 
@@ -146,7 +147,14 @@ bool UpdateService::throttleAllows() const
     }
     const int window = store_.lastOutcome() == QLatin1String("error") ? kFailureThrottleHours
                                                                      : kSuccessThrottleHours;
-    return last.secsTo(QDateTime::currentDateTimeUtc()) >= window * 3600;
+    const qint64 elapsed = last.secsTo(QDateTime::currentDateTimeUtc());
+    if (elapsed < 0) {
+        // 存下来的时间在未来（用户改过系统时钟之类）。继续按窗口算的话自动
+        // 检查会一直停到真实时间追上那个假时间为止，所以直接放行一次，让这次
+        // 检查把时间戳改回一个正常值。
+        return true;
+    }
+    return elapsed >= static_cast<qint64>(window) * 3600;
 }
 
 void UpdateService::scheduleStartupCheck()
@@ -169,9 +177,15 @@ void UpdateService::checkNow(bool manual)
     }
     inFlight_ = true;
     emit findingChanged();
+    // 回调可能在真实 fetcher 那边异步很久之后才回来，而这中间用户完全可能
+    // 已经退出。QPointer 在对象析构后自动置空，照 AnalysisService 的既有写法。
+    QPointer<UpdateService> guard(this);
     fetcher_.fetch(manifestUrl(environment_.major, effectiveChannel()),
-                   [this, manual](bool fetchOk, QByteArray payload, QString reason) {
-                       handlePayload(fetchOk, payload, reason, manual);
+                   [guard, manual](bool fetchOk, QByteArray payload, QString reason) {
+                       if (guard.isNull()) {
+                           return;
+                       }
+                       guard->handlePayload(fetchOk, payload, reason, manual);
                    });
 }
 
@@ -180,6 +194,11 @@ void UpdateService::handlePayload(bool fetchOk,
                                   const QString& reason,
                                   bool manual)
 {
+    if (!inFlight_) {
+        // 端口没有承诺回调只来一次。重复的回调必须原地丢掉，否则会重复记录
+        // 检查时间、重复发信号，让 UI 收到两次结果。
+        return;
+    }
     inFlight_ = false;
     if (!fetchOk) {
         finish(QStringLiteral("failed"), reason, manual);
@@ -241,7 +260,12 @@ void UpdateService::finish(const QString& outcome, const QString& logReason, boo
     emit settingsChanged();
     emit findingChanged();
     if (manual) {
-        emit manualCheckFinished(outcome, availableDetail());
+        // "failed" 时不要把上一次的发现当成这次的结果送出去。finding_ 本身
+        // 保持不变（状态栏标记不该被一次网络抖动抹掉），但这个信号只描述
+        // 「这次检查」，所以失败时它必须是空的。
+        emit manualCheckFinished(outcome,
+                                 outcome == QLatin1String("failed") ? QVariantMap()
+                                                                    : availableDetail());
     }
 }
 
