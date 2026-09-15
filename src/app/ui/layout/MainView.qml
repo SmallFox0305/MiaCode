@@ -207,6 +207,7 @@ Item {
             menuCommands: menuCommands
             shortcuts: root.applicationContext.shortcuts
             documentSession: root.documentSession
+            pet: root.applicationContext.pet
             saveEnabled: root.editorActive
             wholeDocumentSaveEnabled: root.documentSession.hasDocument
             documentAvailable: root.documentSession.hasDocument
@@ -232,6 +233,7 @@ Item {
                 commands: menuCommands
                 shortcuts: root.applicationContext.shortcuts
                 documentSession: root.documentSession
+                pet: root.applicationContext.pet
                 commandsEnabled: true
                 saveEnabled: root.editorActive
                 wholeDocumentSaveEnabled: root.documentSession.hasDocument

@@ -81,6 +81,11 @@ ApplicationWindow {
         value: window.applicationContext.preferences
     }
 
+    PetOverlay {
+        controller: window.applicationContext.pet
+        hostWindow: window
+    }
+
     Binding {
         target: Theme
         property: "appBackground"

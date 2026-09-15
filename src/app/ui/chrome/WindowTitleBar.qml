@@ -10,6 +10,7 @@ Rectangle {
     required property var shortcuts
     required property var documentSession
     required property var platform
+    required property var pet
     property string documentTitle: ""
     property real leadingInset: 0
     property bool saveEnabled: true
@@ -171,6 +172,7 @@ Rectangle {
                 commands: root.menuCommands
                 shortcuts: root.shortcuts
                 documentSession: root.documentSession
+                pet: root.pet
                 commandsEnabled: root.visible
                 saveEnabled: root.saveEnabled
                 wholeDocumentSaveEnabled: root.wholeDocumentSaveEnabled

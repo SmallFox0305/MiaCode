@@ -17,6 +17,7 @@
 #include "preview/AudioSettingsModel.h"
 #include "preview/PreviewSettingsModel.h"
 #include "latency/LatencyModel.h"
+#include "pet/PetOverlayController.h"
 #include "app/services/ApplicationServices.h"
 
 #include <QObject>
@@ -53,6 +54,7 @@ class ApplicationContext final : public QObject
     Q_PROPERTY(QObject* audioSettings READ audioSettings CONSTANT)
     Q_PROPERTY(QObject* previewSettings READ previewSettings CONSTANT)
     Q_PROPERTY(QObject* latency READ latency CONSTANT)
+    Q_PROPERTY(QObject* pet READ pet CONSTANT)
 
 public:
     // Stage 3.5 item 2 is complete here: the context takes the application
@@ -84,6 +86,7 @@ public:
     QObject* audioSettings();
     QObject* previewSettings();
     QObject* latency();
+    QObject* pet();
     void setWindowChrome(QObject* chrome);
     void setChartDropBridge(QObject* bridge);
 
@@ -108,6 +111,7 @@ private:
     miacode::ui::AudioSettingsModel audioSettings_;
     miacode::ui::PreviewSettingsModel previewSettings_;
     miacode::ui::LatencyModel latency_;
+    miacode::ui::PetOverlayController pet_;
     miacode::ui::ShellLifecycle lifecycle_;
     QObject* windowChrome_ = nullptr;
     QObject* chartDropBridge_ = nullptr;

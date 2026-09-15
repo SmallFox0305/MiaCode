@@ -13,6 +13,7 @@ Item {
 
     required property var commands
     required property var shortcuts
+    required property var pet
     // Source of the 调整 menu's operation rows; see chartTransformMenu().
     required property var documentSession
     property bool commandsEnabled: true
@@ -33,7 +34,8 @@ Item {
     readonly property int overflowButtonWidth: 30
     readonly property real fullWidth: fileButton.implicitWidth + editButton.implicitWidth
         + adjustButton.implicitWidth + toolsButton.implicitWidth + previewButton.implicitWidth
-    property int visibleCount: 5
+        + extrasButton.implicitWidth
+    property int visibleCount: 6
     property bool layoutReady: false
     property var _activeMenu: null
 
@@ -51,11 +53,11 @@ Item {
     }
 
     function topButtons() {
-        return [fileButton, editButton, adjustButton, toolsButton, previewButton]
+        return [fileButton, editButton, adjustButton, toolsButton, previewButton, extrasButton]
     }
 
     function topMenus() {
-        return [fileMenu, editMenu, adjustMenu, toolsMenu, previewMenu]
+        return [fileMenu, editMenu, adjustMenu, toolsMenu, previewMenu, extrasMenu]
     }
 
     function closeActiveMenu() {
@@ -237,13 +239,18 @@ Item {
             menu: previewMenu
             menuIndex: 4
         }
+        TopLevelItem {
+            id: extrasButton
+            menu: extrasMenu
+            menuIndex: 5
+        }
         IconButton {
             id: moreButton
             stateColors: Theme.colors.activityState
             width: root.overflowButtonWidth
             y: (root.height - height) / 2
             height: Theme.controlMinHeight
-            visible: root.visibleCount < 5
+            visible: root.visibleCount < 6
             iconSource: Qt.resolvedUrl("icons/more.svg")
             iconWidth: 16
             iconHeight: 16
@@ -569,6 +576,16 @@ Item {
                 text: qsTrId("action.video_settings")
                 enabled: root.commandsEnabled
                 onTriggered: root.commands.previewSettingsRequested()
+            }
+        }
+
+        AppMenu {
+            id: extrasMenu
+            title: qsTrId("menu.extras")
+            AppMenuAction {
+                text: root.pet.visible ? qsTrId("pet.hide") : qsTrId("pet.show")
+                enabled: root.commandsEnabled
+                onTriggered: root.pet.visible = !root.pet.visible
             }
         }
 

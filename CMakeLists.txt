@@ -91,7 +91,7 @@ configure_file(
     @ONLY
 )
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui LinguistTools Multimedia Quick Qml QuickControls2 ShaderTools)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui LinguistTools Multimedia Quick Quick3D Quick3DHelpers Qml QuickControls2 ShaderTools)
 
 qt_policy(SET QTP0001 NEW)
 
@@ -713,6 +713,8 @@ set(MIACODE_UI_QML_FILES
     src/app/ui/media/PvBatchCompressionDialog.qml
     src/app/ui/media/PrependBlankDialog.qml
     src/app/ui/preferences/PreferencesDialog.qml
+    src/app/ui/pet/PetOverlay.qml
+    src/app/ui/pet/model/Fox.qml
     src/app/ui/latency/LatencyPage.qml
     src/app/ui/editor/FindReplaceBar.qml
     src/app/ui/editor/BookmarkList.qml
@@ -779,6 +781,14 @@ foreach(icon_file IN LISTS MIACODE_UI_ICON_FILES)
     set_source_files_properties("${icon_file}" PROPERTIES QT_RESOURCE_ALIAS "icons/${icon_name}")
 endforeach()
 
+set(MIACODE_PET_ASSET_FILES
+    src/app/ui/resources/pet/minecraft/fox.png
+)
+foreach(pet_asset IN LISTS MIACODE_PET_ASSET_FILES)
+    get_filename_component(pet_asset_name "${pet_asset}" NAME)
+    set_source_files_properties("${pet_asset}" PROPERTIES QT_RESOURCE_ALIAS "pet/minecraft/${pet_asset_name}")
+endforeach()
+
 qt_add_qml_module(MiaCode
     URI MiaCode.UI
     VERSION 1.0
@@ -831,6 +841,8 @@ qt_add_qml_module(MiaCode
         src/app/ui/chrome/WindowChrome.h
         src/app/ui/Bootstrap.cpp
         src/app/ui/Bootstrap.h
+        src/app/ui/pet/PetOverlayController.cpp
+        src/app/ui/pet/PetOverlayController.h
         src/app/ui/shell/RootLifecycle.h
         src/app/ui/timeline/TimelineThemeBridge.cpp
         src/app/ui/timeline/TimelineThemeBridge.h
@@ -838,6 +850,10 @@ qt_add_qml_module(MiaCode
         ${MIACODE_UI_QML_FILES}
     RESOURCES
         ${MIACODE_UI_ICON_FILES}
+        ${MIACODE_PET_ASSET_FILES}
+    IMPORTS
+        QtQuick3D
+        QtQuick3D.Helpers
 )
 
 set(MIACODE_TRANSLATION_TS_FILES
@@ -901,6 +917,8 @@ target_link_libraries(MiaCode PRIVATE
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    Qt6::Quick3D
+    Qt6::Quick3DHelpers
     Qt6::QuickControls2
     soundtouch
     miniz
@@ -913,6 +931,7 @@ target_include_directories(MiaCode PRIVATE
     src/app/quick_shell
     src/app/ui
     src/app/ui/editor
+    src/app/ui/pet
     src/app/ui/timeline
     src/core/video
     src/editor
@@ -1089,6 +1108,7 @@ if (APPLE)
         src/app/ui/chrome/NativeWindowThemeMac.h
         src/app/ui/chrome/NativeWindowThemeMac.mm
         src/app/ui/chrome/WindowChrome.mm
+        src/app/ui/pet/PetNativeWindowMac.mm
     )
     target_link_libraries(MiaCode PRIVATE "-framework AppKit")
 endif()

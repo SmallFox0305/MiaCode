@@ -3105,6 +3105,10 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <source>Export as ZIP...</source>
         <translation>导出为ZIP</translation>
     </message>
+    <message id="menu.extras">
+        <source>Extras(&amp;A)</source>
+        <translation>附加(&amp;A)</translation>
+    </message>
     <message id="menu.file">
         <source>File(&amp;F)</source>
         <translation>文件(&amp;F)</translation>
@@ -3160,6 +3164,38 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
     <message id="menu.transform">
         <source>Modify(&amp;M)</source>
         <translation>调整(&amp;M)</translation>
+    </message>
+    <message id="pet.accessible_name">
+        <source>MiaCode desktop pet</source>
+        <translation>MiaCode 桌宠</translation>
+    </message>
+    <message id="pet.camera_mirror">
+        <source>Mirror Camera</source>
+        <translation>镜像镜头</translation>
+    </message>
+    <message id="pet.enlarge">
+        <source>Enlarge Desktop Pet</source>
+        <translation>放大桌宠</translation>
+    </message>
+    <message id="pet.shrink">
+        <source>Shrink Desktop Pet</source>
+        <translation>缩小桌宠</translation>
+    </message>
+    <message id="pet.reset_size">
+        <source>Reset Desktop Pet Size</source>
+        <translation>恢复默认大小</translation>
+    </message>
+    <message id="pet.hide">
+        <source>Hide Desktop Pet</source>
+        <translation>隐藏桌宠</translation>
+    </message>
+    <message id="pet.show">
+        <source>Show Desktop Pet</source>
+        <translation>显示桌宠</translation>
+    </message>
+    <message id="pet.window_title">
+        <source>MiaCode Desktop Pet</source>
+        <translation>MiaCode 桌宠</translation>
     </message>
     <message id="metadata.choose_an_mp3_and_pull">
         <source>Choose an MP3 and pull the title from its ID3 tag.</source>

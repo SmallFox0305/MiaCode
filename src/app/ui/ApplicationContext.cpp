@@ -27,6 +27,7 @@ ApplicationContext::ApplicationContext(miacode::ApplicationServices& services,
     , previewSettings_(services.shellNotifications(), services.uiRequests(),
                        services.previewAppearance(), services.previewSurfaceSlot(), this)
     , latency_(services.latencyEngineSlot(), this)
+    , pet_(this)
     , lifecycle_(services.editorPageRouterSlot(), this)
 {
     // Keep the QML text controller in lockstep with the persisted settings.
@@ -95,6 +96,7 @@ QObject* ApplicationContext::audioSettings() { return &audioSettings_; }
 QObject* ApplicationContext::previewSettings() { return &previewSettings_; }
 
 QObject* ApplicationContext::latency() { return &latency_; }
+QObject* ApplicationContext::pet() { return &pet_; }
 
 void ApplicationContext::setWindowChrome(QObject* chrome)
 {
