@@ -145,7 +145,6 @@ scripts/build/*
 !scripts/build/package-win.ps1
 !scripts/build/provision-qt.ps1
 !scripts/build/windows-toolchain.psd1
-!scripts/build/thin-macos-app.sh
 !scripts/debug/
 scripts/debug/*
 !scripts/debug/analyze_timeline_cadence.py

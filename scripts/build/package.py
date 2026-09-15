@@ -13,6 +13,7 @@ import tempfile
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -21,11 +22,27 @@ ROOT = Path(__file__).resolve().parents[2]
 DIST = ROOT / "dist"
 QT_VERSION = "6.11.1"
 QT_MODULES = ("qtmultimedia", "qtshadertools", "qtquick3d")
-JOBS = os.environ.get("MIACODE_PACKAGE_JOBS", "4")
+MACHO_MAGICS = {
+    b"\xfe\xed\xfa\xce",
+    b"\xfe\xed\xfa\xcf",
+    b"\xce\xfa\xed\xfe",
+    b"\xcf\xfa\xed\xfe",
+    b"\xca\xfe\xba\xbe",
+    b"\xbe\xba\xfe\xca",
+    b"\xca\xfe\xd0\x0d",
+    b"\x0d\xd0\xfe\xca",
+}
 PLATFORM = os.environ.get("CI_PLATFORM", "")
 BUILD_DIR = Path(os.environ.get("CI_BUILD_DIR", "build"))
 if not BUILD_DIR.is_absolute():
     BUILD_DIR = ROOT / BUILD_DIR
+
+
+def cpu_jobs() -> str:
+    override = os.environ.get("MIACODE_PACKAGE_JOBS", "").strip()
+    if override:
+        return override
+    return str(os.cpu_count() or 1)
 
 
 def run(args, cwd=None, env=None):
@@ -329,10 +346,11 @@ def build_windows():
         "-DCMAKE_TRY_COMPILE_CONFIGURATION=Release",
         "-DMIACODE_BUILD_DEV_TOOLS=OFF",
     ], env=env)
-    run(["cmake", "--build", BUILD_DIR, "--config", "Release", "--target", "MiaCode", "MiaCodeLauncher", "--parallel", JOBS], env=env)
+    jobs = cpu_jobs()
+    run(["cmake", "--build", BUILD_DIR, "--config", "Release", "--target", "MiaCode", "MiaCodeLauncher", "--parallel", jobs], env=env)
     run([
         "powershell", "-ExecutionPolicy", "Bypass", "-File", ROOT / "scripts" / "build" / "package-win.ps1",
-        "-Arch", spec["arch"], "-BuildDir", BUILD_DIR, "-QtRoot", qt, "-BuildJobs", JOBS,
+        "-Arch", spec["arch"], "-BuildDir", BUILD_DIR, "-QtRoot", qt, "-BuildJobs", jobs,
     ], env=env)
 
 
@@ -356,6 +374,49 @@ def build():
         build_macos()
         return
     raise RuntimeError(f"Unsupported platform: {PLATFORM}")
+
+
+def is_macho(path: Path) -> bool:
+    try:
+        with path.open("rb") as stream:
+            return stream.read(4) in MACHO_MAGICS
+    except OSError:
+        return False
+
+
+def thin_one(path: Path, arch: str) -> int:
+    archs = subprocess.check_output(["lipo", "-archs", str(path)], text=True).split()
+    if arch not in archs:
+        raise RuntimeError(f"Mach-O is missing '{arch}': {path} (has: {' '.join(archs)})")
+    if archs == [arch]:
+        return 0
+    handle, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".thin", dir=path.parent)
+    os.close(handle)
+    try:
+        run(["lipo", path, "-thin", arch, "-output", tmp])
+        os.chmod(tmp, path.stat().st_mode)
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+    return 1
+
+
+def thin():
+    app = Path(sys.argv[2])
+    arch = sys.argv[3]
+    if not app.is_dir() or not app.name.endswith(".app"):
+        raise RuntimeError(f"App bundle not found: {app}")
+    files = [Path(dirpath) / name for dirpath, _, names in os.walk(app) for name in names if is_macho(Path(dirpath) / name)]
+    if not files:
+        raise RuntimeError(f"No Mach-O binaries found in {app}")
+    thinned = 0
+    with ThreadPoolExecutor(max_workers=int(cpu_jobs())) as pool:
+        futures = [pool.submit(thin_one, path, arch) for path in files]
+        for future in as_completed(futures):
+            thinned += future.result()
+    print(f"thinned {thinned}/{len(files)} Mach-O files to {arch}")
 
 
 def artifact():
@@ -419,4 +480,4 @@ WINDOWS = {
 
 
 if __name__ == "__main__":
-    {"keys": keys, "deps": deps, "build": build, "artifact": artifact, "report": report}[sys.argv[1]]()
+    {"keys": keys, "deps": deps, "build": build, "artifact": artifact, "report": report, "thin": thin}[sys.argv[1]]()

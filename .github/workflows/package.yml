@@ -55,8 +55,7 @@ jobs:
       CMAKE_CXX_COMPILER_LAUNCHER: sccache
       CMAKE_OSX_ARCHITECTURES: arm64
       CMAKE_OSX_DEPLOYMENT_TARGET: "13.0"
-      MIACODE_PACKAGE_JOBS: "4"
-      MIACODE_FFMPEG_BUILD_JOBS: "4"
+      SCCACHE_IDLE_TIMEOUT: "0"
       CI_PLATFORM: ${{ matrix.platform }}
       CI_BUILD_DIR: ${{ matrix.build }}
     steps:
@@ -160,7 +159,7 @@ jobs:
 
       - name: Flush compiler
         if: steps.build.outcome == 'success'
-        run: sccache --stop-server
+        run: sccache --stop-server || true
 
       - name: Save compiler
         if: steps.build.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true'

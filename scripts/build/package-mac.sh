@@ -610,8 +610,7 @@ strip_absolute_build_rpaths "$DIST_DIR/MiaCode.app/Contents/MacOS/MiaCode"
 
 if [[ "$THIN_SINGLE_ARCH_PACKAGE" == "ON" ]]; then
   package_step "Thinning all bundled Mach-O files to arm64"
-  "$ROOT_DIR/scripts/build/thin-macos-app.sh" \
-    "$DIST_DIR/MiaCode.app" "arm64"
+  python3 "$ROOT_DIR/scripts/build/package.py" thin "$DIST_DIR/MiaCode.app" "arm64"
 fi
 
 bass_frameworks_dir="$DIST_DIR/MiaCode.app/Contents/Frameworks"
