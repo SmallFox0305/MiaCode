@@ -38,9 +38,13 @@ Qt 最低版本锁定：`6.8`
 | `Qt6::Qml` | 宿主 | 全平台 | `QQmlApplicationEngine`（`Bootstrap`）、全部 `Qml*` 模型 | 进程启动 | 链接期；`qml_*_spec` 组 |
 | `Qt6::Quick` | 宿主 | 全平台 | `QQuickWindow`、`src/preview/quick_scene/`、`src/timeline/quick/` | 进程启动 | 链接期；`qml_*_spec` 组 |
 | `Qt6::QuickControls2` | 宿主 | 全平台 | `src/app/ui/` 全部 QML 页面与控件 | 首个 QML 组件实例化 | 链接期；`qml_main_menu_spec` 等 |
+| `Qt6::Quick3D` | 渲染 | 全平台 | `src/app/ui/pet/PetOverlay.qml` 的 `View3D`、`PerspectiveCamera`；`src/app/ui/pet/model/Fox.qml` 的 `Node`、`Model`、`DefaultMaterial`（桌宠狐狸） | 桌宠窗口首次显示（`PetOverlayController` 置 `visible`） | 链接期；桌宠手工回归 |
+| `Qt6::Quick3DHelpers` | 渲染 | 全平台 | `src/app/ui/pet/model/Fox.qml` 的 `ProceduralMesh`：狐狸的盒式几何体在运行时生成（8 处），不走预烘的 `.mesh` 资源 | 同 `Qt6::Quick3D` | 链接期；桌宠手工回归 |
 | `Qt6::Multimedia` | 媒体 | 全平台 | `QtPreviewSfxRuntime*`（判定音效）、`QVideoFrame` 桥接 | 预览首次播放 / 首帧解码 | 链接期；`HAVE_QT_MULTIMEDIA=1`；预览手工回归 |
 | `Qt6::MultimediaQuickPrivate` | 媒体 | `WIN32 OR APPLE OR Linux` | **不由 `src/` 直接使用**；仅供 `third_party/QtAVPlayer` 的 `QT_AVPLAYER_MULTIMEDIA` 桥编译 `QAVVideoFrame -> QVideoFrame` | 背景视频首帧解码 | 链接期；`qtavplayer_platform_spec`；本文「QtAVPlayer 媒体适配层」表 |
 | `${QtAVPlayer_LIBS}` | 媒体 | `WIN32 OR APPLE`（需 `MIACODE_FFMPEG_DEV_DIR`）；Linux 用主机 pkg-config FFmpeg + libva | `PreviewStageMediaHost*`（PV/BG 解码）、`PreviewSharedD3D11Device`（D3D11VA 共享设备） | 背景视频首帧解码 | `qtavplayer_platform_spec`；macOS 打包契约 |
+| `PkgConfig::MIACODE_FFMPEG` | 媒体 | `Linux`（Win/macOS 改走 `MIACODE_FFMPEG_DEV_DIR` 的项目 SDK，见上一行） | QtAVPlayer 的解码依赖，由主机 pkg-config 提供：`libavfilter`、`libavcodec`、`libavformat`、`libavutil`、`libswresample`、`libswscale` | 背景视频首帧解码 | 链接期（Linux 构建）；`qtavplayer_platform_spec` |
+| `PkgConfig::MIACODE_VAAPI` | 媒体 | `Linux` | QtAVPlayer 在 Linux 的 VAAPI 硬件解码路径：`libva`、`libva-drm`、`libdrm` | 背景视频首帧解码（硬件解码可用时） | 链接期（Linux 构建）；`qtavplayer_platform_spec` |
 | `soundtouch` | 媒体 | 全平台 | 变速播放与音频处理（`src/audio/`、`src/tools/media/`） | 首次变速播放 / 音频处理作业 | 链接期；音频手工回归 |
 | `bass` | 媒体 | 全平台（Win: `bass.lib`，macOS: `libbass.dylib`，Linux: `libbass.so`） | `BassPreviewAudioBackend`、`BassExportAudioBackend` | 预览音频后端初始化 | `MIACODE_HAS_BASS_AUDIO=1`；macOS 打包契约校验 dylib 已随包 |
 | `bassmix` | 媒体 | 全平台 | 同上（混音总线） | 同上 | 同上 |
@@ -58,6 +62,7 @@ Qt 最低版本锁定：`6.8`
 | `version` | 平台 | `WIN32`（MinGW） | 启动诊断的文件版本查询 | 启动诊断 | 链接期 |
 | `rstrtmgr` | 平台 | `WIN32`（MinGW） | 媒体工具的 Restart Manager 占用进程查找 | 媒体工具报「文件被占用」时 | 链接期 |
 | `dwmapi` | 平台 | `WIN32` | `WindowChrome` 的 `DwmExtendFrameIntoClientArea` | 根窗口创建 | 链接期；Windows 冷启动走查 |
+| `${CMAKE_DL_LIBS}` | 平台 | `Linux`（只在 Linux BASS 块里加入链接行；macOS 的 `dl` 由 libSystem 隐式提供，无需显式链接） | `src/audio/BassPreviewAudioBackend_EngineInit.cpp` 用 `dlopen`/`dlsym` 载入 `libbass_fx.so` 并取 `BASS_FX_TempoCreate` | 首次变速播放（BASS FX 引擎初始化） | 链接期（Linux 构建）；音频手工回归 |
 
 ## 构建期组件
 
@@ -67,6 +72,7 @@ Qt 最低版本锁定：`6.8`
 
 | 组件 | 用途 | 为什么不算运行时依赖 |
 | --- | --- | --- |
+| `LinguistTools` | `qt_add_lrelease` 把 `translations/*.ts` 编译成 `.qm`，产物再作为资源打进产品 | 只在构建期运行 `lrelease`；产物是资源文件，`MiaCode` 不链接 `Qt6::LinguistTools` |
 | `ShaderTools` | `qt6_add_shaders` 把 `src/intro/shaders/*.frag`、`*.vert` 编译成 `.qsb` 资源 | 只在构建期运行 `qsb` 工具；产物是资源文件，`MiaCode` 不链接 `Qt6::ShaderTools` |
 
 > 2026-09-01 本次同时删掉了 `OpenGL` 组件：它被写成 `REQUIRED` 但没有任何 target 链接
