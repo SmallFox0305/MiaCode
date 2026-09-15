@@ -1,0 +1,294 @@
+#include "app/services/update/UpdateService.h"
+
+#include <QDateTime>
+#include <QDebug>
+#include <QDesktopServices>
+#include <QLocale>
+#include <QTimer>
+#include <QUrl>
+
+namespace miacode::update {
+namespace {
+
+constexpr int kSuccessThrottleHours = 24;
+constexpr int kFailureThrottleHours = 4;
+constexpr int kStartupDelayMs = 8000;
+
+QUrl manifestUrl(int major, const QString& channel)
+{
+    // 固定 URL 的 asset，挂在永不变的 channel-manifest tag 上。
+    // 不走 GitHub REST API，所以没有匿名限流。
+    return QUrl(QStringLiteral(
+                    "https://github.com/fanfaredash/MiaCode/releases/download/"
+                    "channel-manifest/%1-%2.json")
+                    .arg(major)
+                    .arg(channel));
+}
+
+QString formatSize(qint64 bytes)
+{
+    if (bytes <= 0) {
+        return QString();
+    }
+    return QLocale::system().formattedDataSize(bytes);
+}
+
+} // namespace
+
+UpdateService::UpdateService(UpdateFetcher& fetcher,
+                             UpdateStateStore& store,
+                             UpdateEnvironment environment,
+                             QObject* parent)
+    : QObject(parent)
+    , fetcher_(fetcher)
+    , store_(store)
+    , environment_(std::move(environment))
+{
+    const auto parsed = SemanticVersion::parse(environment_.versionText);
+    currentVersionParsed_ = parsed.has_value();
+    if (currentVersionParsed_) {
+        currentVersion_ = *parsed;
+    }
+    restoreKnownFinding();
+}
+
+bool UpdateService::checkEnabled() const
+{
+    return store_.checkEnabled();
+}
+
+void UpdateService::setCheckEnabled(bool enabled)
+{
+    if (enabled == store_.checkEnabled()) {
+        return;
+    }
+    store_.setCheckEnabled(enabled);
+    emit settingsChanged();
+}
+
+QString UpdateService::channelToken() const
+{
+    return store_.channelToken();
+}
+
+void UpdateService::setChannelToken(const QString& token)
+{
+    if (token != QLatin1String("stable") && token != QLatin1String("beta")) {
+        return;
+    }
+    if (token == store_.channelToken()) {
+        return;
+    }
+    store_.setChannelToken(token);
+    emit settingsChanged();
+}
+
+QString UpdateService::lastCheckText() const
+{
+    const QDateTime at = store_.lastCheckAt();
+    if (!at.isValid()) {
+        return QString();
+    }
+    return QLocale::system().toString(at.toLocalTime(), QLocale::ShortFormat);
+}
+
+QString UpdateService::effectiveChannel() const
+{
+    const QString stored = store_.channelToken();
+    if (stored == QLatin1String("stable") || stored == QLatin1String("beta")) {
+        return stored;
+    }
+    // 用户没选过：本构建自己是预发布版就默认 beta，正式版默认 stable。
+    // 装 alpha 的人本来就是愿意吃预发布版的人，不该被降级到只看 stable。
+    if (currentVersionParsed_ && !currentVersion_.prerelease.isEmpty()) {
+        return QStringLiteral("beta");
+    }
+    return QStringLiteral("stable");
+}
+
+void UpdateService::restoreKnownFinding()
+{
+    // 启动时清理陈旧状态，否则会出现「已经升级了还在提示」。
+    const QString skipped = store_.skippedVersion();
+    if (!skipped.isEmpty() && currentVersionParsed_) {
+        const auto parsed = SemanticVersion::parse(skipped);
+        if (!parsed.has_value() || SemanticVersion::compare(currentVersion_, *parsed) >= 0) {
+            store_.setSkippedVersion(QString());
+        }
+    }
+
+    const QString known = store_.knownVersion();
+    if (known.isEmpty() || !currentVersionParsed_) {
+        return;
+    }
+    const auto parsed = SemanticVersion::parse(known);
+    if (!parsed.has_value() || SemanticVersion::compare(currentVersion_, *parsed) >= 0) {
+        store_.setKnownVersion(QString());
+        return;
+    }
+    if (known == store_.skippedVersion()) {
+        return;
+    }
+    // 不等网络就先把标记亮起来；这一版只知道版本号，详情等本次检查回来再补。
+    updateAvailable_ = true;
+    availableVersion_ = known;
+    finding_ = UpdateManifest();
+    finding_.versionText = known;
+    finding_.version = *parsed;
+    emit findingChanged();
+}
+
+bool UpdateService::throttleAllows() const
+{
+    const QDateTime last = store_.lastCheckAt();
+    if (!last.isValid()) {
+        return true;
+    }
+    const int window = store_.lastOutcome() == QLatin1String("error") ? kFailureThrottleHours
+                                                                     : kSuccessThrottleHours;
+    return last.secsTo(QDateTime::currentDateTimeUtc()) >= window * 3600;
+}
+
+void UpdateService::scheduleStartupCheck()
+{
+    if (!store_.checkEnabled()) {
+        return;
+    }
+    QTimer::singleShot(kStartupDelayMs, this, [this]() { checkNow(false); });
+}
+
+void UpdateService::checkNow(bool manual)
+{
+    if (inFlight_) {
+        return;
+    }
+    if (!manual) {
+        if (!store_.checkEnabled() || !throttleAllows()) {
+            return;
+        }
+    }
+    inFlight_ = true;
+    emit findingChanged();
+    fetcher_.fetch(manifestUrl(environment_.major, effectiveChannel()),
+                   [this, manual](bool fetchOk, QByteArray payload, QString reason) {
+                       handlePayload(fetchOk, payload, reason, manual);
+                   });
+}
+
+void UpdateService::handlePayload(bool fetchOk,
+                                  const QByteArray& payload,
+                                  const QString& reason,
+                                  bool manual)
+{
+    inFlight_ = false;
+    if (!fetchOk) {
+        finish(QStringLiteral("failed"), reason, manual);
+        return;
+    }
+    const ManifestParseResult parsed = parseManifest(
+        payload, environment_.major, environment_.platformKey, environment_.languageToken);
+    switch (parsed.status) {
+    case ManifestStatus::Invalid:
+        finish(QStringLiteral("failed"), parsed.reason, manual);
+        return;
+    case ManifestStatus::NotApplicable:
+        // 「这份 manifest 不适用于你」不是错误。没有本平台的包要单独说，
+        // 否则会把「我们没给你这个平台出包」谎报成「你已经是最新版」。
+        clearFinding();
+        finish(parsed.reason.contains(QLatin1String("no package"))
+                       || parsed.reason.contains(QLatin1String("no release key"))
+                   ? QStringLiteral("no-package")
+                   : QStringLiteral("up-to-date"),
+               parsed.reason, manual);
+        return;
+    case ManifestStatus::Ok:
+        break;
+    }
+
+    if (!currentVersionParsed_) {
+        // 自身版本都解析不出来，不敢比较（fail closed）。
+        finish(QStringLiteral("failed"),
+               QStringLiteral("running version is unparseable: '%1'").arg(environment_.versionText),
+               manual);
+        return;
+    }
+    if (SemanticVersion::compare(parsed.manifest.version, currentVersion_) <= 0) {
+        clearFinding();
+        store_.setKnownVersion(QString());
+        finish(QStringLiteral("up-to-date"), QString(), manual);
+        return;
+    }
+    if (!manual && parsed.manifest.versionText == store_.skippedVersion()) {
+        clearFinding();
+        finish(QStringLiteral("up-to-date"), QStringLiteral("version skipped by the user"), false);
+        return;
+    }
+
+    setFinding(parsed.manifest);
+    store_.setKnownVersion(parsed.manifest.versionText);
+    finish(QStringLiteral("available"), QString(), manual);
+}
+
+void UpdateService::finish(const QString& outcome, const QString& logReason, bool manual)
+{
+    store_.recordCheck(QDateTime::currentDateTimeUtc(),
+                       outcome == QLatin1String("failed") ? QStringLiteral("error")
+                                                          : QStringLiteral("ok"));
+    if (!logReason.isEmpty()) {
+        // 原因只进日志，不进 UI。
+        qWarning("update check: %s", qUtf8Printable(logReason));
+    }
+    emit settingsChanged();
+    emit findingChanged();
+    if (manual) {
+        emit manualCheckFinished(outcome, availableDetail());
+    }
+}
+
+void UpdateService::setFinding(const UpdateManifest& manifest)
+{
+    finding_ = manifest;
+    updateAvailable_ = true;
+    availableVersion_ = manifest.versionText;
+}
+
+void UpdateService::clearFinding()
+{
+    finding_ = UpdateManifest();
+    updateAvailable_ = false;
+    availableVersion_.clear();
+}
+
+QVariantMap UpdateService::availableDetail() const
+{
+    return QVariantMap{
+        {QStringLiteral("version"), finding_.versionText},
+        {QStringLiteral("releasedAt"), finding_.releasedAt},
+        {QStringLiteral("notes"), finding_.notes},
+        {QStringLiteral("sizeText"), formatSize(finding_.package.bytes)},
+        {QStringLiteral("releasePageUrl"), finding_.releasePageUrl},
+        {QStringLiteral("mandatory"), finding_.mandatory},
+    };
+}
+
+void UpdateService::openDownloadPage()
+{
+    if (!updateAvailable_ || finding_.releasePageUrl.isEmpty()) {
+        return;
+    }
+    // 跳 Release 页面而不是包直链：页面上有完整更新说明和全部平台的包，
+    // 用户能自己核对架构（Windows x64 / ARM64 极易选错）。
+    QDesktopServices::openUrl(QUrl(finding_.releasePageUrl));
+}
+
+void UpdateService::skipAvailableVersion()
+{
+    if (availableVersion_.isEmpty()) {
+        return;
+    }
+    store_.setSkippedVersion(availableVersion_);
+    clearFinding();
+    emit findingChanged();
+}
+
+} // namespace miacode::update

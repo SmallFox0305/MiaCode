@@ -584,3 +584,20 @@ miacode_add_spec(update_manifest_spec
     LIBS Qt6::Core
     INCLUDES src
 )
+
+miacode_add_spec(update_service_spec
+    OWNER src/app/services/update
+    CONTRACT v2.update-service
+    DOMAIN services KIND behavior RISK high
+    EXECUTION ctest STATUS active PLATFORM all
+    SOURCES
+        src/tools/update/UpdateServiceSpec.cpp
+        src/app/services/update/UpdateService.cpp
+        src/app/services/update/UpdateService.h
+        src/app/services/update/UpdateManifest.cpp
+        src/app/services/update/UpdateManifest.h
+        src/app/services/update/SemanticVersion.cpp
+        src/app/services/update/SemanticVersion.h
+    LIBS Qt6::Core Qt6::Gui Qt6::Test
+    INCLUDES src
+)
