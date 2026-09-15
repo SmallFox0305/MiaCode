@@ -2,7 +2,7 @@
 # macOS local packaging entry: reuses the Qt install, the FFmpeg SDK, and the
 # export ffmpeg binary already present on this machine, then hands the Release
 # build and package assembly to package-mac.sh.
-# CI runs use build-macos-ci.sh, which installs Qt and the FFmpeg SDKs first.
+# CI runs use python scripts/build/package.py.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

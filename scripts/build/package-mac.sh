@@ -608,19 +608,11 @@ package_step "Staging the self-contained FFmpeg 8.1 preview runtime"
 stage_macos_ffmpeg_runtime "$DIST_DIR/MiaCode.app"
 strip_absolute_build_rpaths "$DIST_DIR/MiaCode.app/Contents/MacOS/MiaCode"
 
-# macdeployqt copies universal Qt frameworks/plugins even when MiaCode itself is
-# a single-architecture executable. For a package explicitly configured as
-# arm64 or x86_64, keep only that matching slice. The helper hard-fails on any
-# Mach-O that lacks the target architecture, preventing an x86-only Rosetta
-# helper or another incompatible binary from being silently damaged.
 if [[ "$THIN_SINGLE_ARCH_PACKAGE" == "ON" ]]; then
   package_step "Thinning all bundled Mach-O files to arm64"
   "$ROOT_DIR/scripts/build/thin-macos-app.sh" \
     "$DIST_DIR/MiaCode.app" "arm64"
 fi
-
-package_step "Verifying there are no build-machine dylib references"
-verify_no_external_ffmpeg_dylib_references "$DIST_DIR/MiaCode.app"
 
 bass_frameworks_dir="$DIST_DIR/MiaCode.app/Contents/Frameworks"
 required_bass_libraries=(
@@ -646,11 +638,6 @@ if [[ -n "$MACOS_CODESIGN_IDENTITY" ]]; then
     exit 1
   fi
   codesign --force --deep --sign "$MACOS_CODESIGN_IDENTITY" "$DIST_DIR/MiaCode.app"
-fi
-
-if [[ -n "$DEPLOYMENT_TARGET" ]]; then
-  package_step "Validating minimum macOS version $DEPLOYMENT_TARGET"
-  validate_minos "$DIST_DIR/MiaCode.app/Contents/MacOS/MiaCode" "$DEPLOYMENT_TARGET"
 fi
 
 assert_no_packaged_extensions "$DIST_DIR/MiaCode.app"

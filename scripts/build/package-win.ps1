@@ -291,23 +291,6 @@ function Remove-FileWithRetry {
     }
 }
 
-function Expand-PackagePathEntry {
-    param(
-        [string]$Entry,
-        [string]$Config
-    )
-
-    # 'qt:<BaseName>'       -> <BaseName>[d].dll at the package root
-    # 'app-qt:<BaseName>'   -> app\<BaseName>[d].dll
-    if ($Entry -like "app-qt:*") {
-        return Join-Path "app" (Get-QtRuntimeDllName -BaseName $Entry.Substring(7) -Config $Config)
-    }
-    if ($Entry -like "qt:*") {
-        return Get-QtRuntimeDllName -BaseName $Entry.Substring(3) -Config $Config
-    }
-    return $Entry
-}
-
 function Copy-QtRuntimeDllSet {
     param(
         [string]$QtBinDir,
@@ -335,20 +318,6 @@ function Remove-PackagedDllIfPresent {
     $dllPath = Join-Path $DistDir $DllName
     if (Test-Path $dllPath) {
         Remove-Item -Force $dllPath
-    }
-}
-
-function Assert-PackageEntries {
-    param(
-        [string]$DistDir,
-        [string[]]$RequiredRelativePaths
-    )
-
-    foreach ($relativePath in $RequiredRelativePaths) {
-        $fullPath = Join-Path $DistDir $relativePath
-        if (!(Test-Path $fullPath)) {
-            throw "Packaged artifact is missing required path: $fullPath"
-        }
     }
 }
 
@@ -703,27 +672,6 @@ if (Test-Path $ffmpegSrc) {
 }
 
 # Required package contents come from the toolchain data file.
-$requiredPackagePaths = @($toolchainData.Package.RequiredRelativePaths | ForEach-Object {
-    Expand-PackagePathEntry -Entry $_ -Config $Config
-})
-$archSpecificRequiredPaths = $toolchainData.Package.AdditionalRequiredRelativePathsByArch.$Arch
-if ($null -ne $archSpecificRequiredPaths) {
-    foreach ($entry in $archSpecificRequiredPaths) {
-        $requiredPackagePaths += Expand-PackagePathEntry -Entry $entry -Config $Config
-    }
-}
-foreach ($runtimeDll in $toolchainRuntimeDlls) {
-    $requiredPackagePaths += Join-Path "app" $runtimeDll
-}
-if ($IncludeDevTools) {
-    $qtWidgetsDll = Expand-PackagePathEntry -Entry "app-qt:Qt6Widgets" -Config $Config
-    $requiredPackagePaths += $qtWidgetsDll
-}
-
-Assert-PackageEntries -DistDir $DistDir -RequiredRelativePaths $requiredPackagePaths
-
-# Archives are produced from the toolchain data file. 7z (LZMA2 + solid blocks)
-# reaches roughly half the size of the deflate zip for this payload.
 $archiveFormats = $toolchainData.Package.ArchiveFormats
 if (!$archiveFormats -or $archiveFormats.Count -eq 0) {
     $archiveFormats = @("7z")

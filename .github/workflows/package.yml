@@ -5,11 +5,6 @@ on:
   push:
     branches: [dev, feature/qml-ui, ci/platform-package-refactor]
   workflow_dispatch:
-    inputs:
-      macos_only:
-        description: 运行 macOS arm64 修复验收
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -27,30 +22,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: >-
-          ${{ fromJSON(inputs.macos_only &&
-          '[{
-            "platform": "macos-arm64", "runner": "macos-14",
-            "toolchain": "apple-clang", "build": "build-macos",
-            "qt": ".qt/6.11.1", "media": "third_party/ffmpeg/macos",
-            "version": "ffmpeg8.1.2", "estimate": "80–83 MiB"
-          }]' ||
-          '[{
-            "platform": "windows-x64", "runner": "windows-2022",
-            "toolchain": "msvc", "build": "build-msvc",
-            "qt": ".qt/6.11.1/msvc2022_64", "media": "third_party/ffmpeg/windows/win64",
-            "version": "ffmpeg7.1", "estimate": "77–79 MiB"
-          }, {
-            "platform": "windows-arm64", "runner": "windows-11-arm",
-            "toolchain": "msvc-arm64", "build": "build-msvc-arm64",
-            "qt": ".qt/6.11.1/msvc2022_arm64", "media": "third_party/ffmpeg/windows/winarm64",
-            "version": "ffmpeg8.1.2", "estimate": "92–96 MiB"
-          }, {
-            "platform": "macos-arm64", "runner": "macos-14",
-            "toolchain": "apple-clang", "build": "build-macos",
-            "qt": ".qt/6.11.1", "media": "third_party/ffmpeg/macos",
-            "version": "ffmpeg8.1.2", "estimate": "80–83 MiB"
-          }]') }}
+        include:
+          - platform: windows-x64
+            runner: windows-2022
+            toolchain: msvc
+            build: build-msvc
+            qt: .qt/6.11.1/msvc2022_64
+            media: third_party/ffmpeg/windows/win64
+            version: ffmpeg7.1
+          - platform: windows-arm64
+            runner: windows-11-arm
+            toolchain: msvc-arm64
+            build: build-msvc-arm64
+            qt: .qt/6.11.1/msvc2022_arm64
+            media: third_party/ffmpeg/windows/winarm64
+            version: ffmpeg8.1.2
+          - platform: macos-arm64
+            runner: macos-14
+            toolchain: apple-clang
+            build: build-macos
+            qt: .qt/6.11.1
+            media: third_party/ffmpeg/macos
+            version: ffmpeg8.1.2
     defaults:
       run:
         shell: bash
@@ -65,30 +58,28 @@ jobs:
       MIACODE_PACKAGE_JOBS: "4"
       MIACODE_FFMPEG_BUILD_JOBS: "4"
       CI_PLATFORM: ${{ matrix.platform }}
-      CI_ESTIMATE: ${{ matrix.estimate }}
+      CI_BUILD_DIR: ${{ matrix.build }}
     steps:
       - name: Start timing
         run: echo "CI_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
 
-      - name: Checkout inputs
+      - name: Checkout
         uses: actions/checkout@v7
         with:
           lfs: false
 
-      - name: Identify inputs and estimate package
-        id: inputs
-        run: python scripts/build/ci-package.py inputs
+      - name: Cache keys
+        id: keys
+        run: python scripts/build/package.py keys
 
-      - name: Restore finished package
+      - name: Restore package
         id: package-cache
         uses: actions/cache/restore@v6
         with:
-          path: |
-            dist/*.7z
-            dist/verification.json
-          key: platform-v1-package-${{ matrix.platform }}-${{ steps.inputs.outputs.source }}
+          path: dist/*.7z
+          key: platform-v1-package-${{ matrix.platform }}-${{ steps.keys.outputs.source }}
 
-      - name: Fetch build assets
+      - name: Fetch assets
         if: steps.package-cache.outputs.cache-hit != 'true'
         run: |
           git lfs pull
@@ -97,137 +88,116 @@ jobs:
       - name: Restore Qt
         if: steps.package-cache.outputs.cache-hit != 'true'
         id: qt-cache
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: ${{ matrix.qt }}
-          key: platform-v1-qt-${{ matrix.platform }}-6.11.1-quick3d
+          key: platform-v1-qt-${{ matrix.platform }}-6.11.1
+          restore-keys: platform-v1-qt-${{ matrix.platform }}-
 
       - name: Restore FFmpeg
         if: steps.package-cache.outputs.cache-hit != 'true'
         id: media-cache
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: ${{ matrix.media }}
-          key: platform-v1-media-${{ matrix.platform }}-${{ matrix.version }}-${{ steps.inputs.outputs.recipe }}
-          restore-keys: platform-v1-media-${{ matrix.platform }}-${{ matrix.version }}-
+          key: platform-v1-media-${{ matrix.platform }}-${{ matrix.version }}-${{ steps.keys.outputs.recipe }}
+          restore-keys: |
+            platform-v1-media-${{ matrix.platform }}-${{ matrix.version }}-
+            platform-v1-media-${{ matrix.platform }}-
 
-      - name: Restore compiler outputs
+      - name: Restore compiler
         if: steps.package-cache.outputs.cache-hit != 'true'
         id: compiler-cache
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: .cache/sccache
-          key: platform-v1-compiler-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-${{ steps.inputs.outputs.source }}
+          key: platform-v1-compiler-${{ matrix.platform }}-${{ steps.keys.outputs.toolchain }}-${{ steps.keys.outputs.source }}
           restore-keys: |
-            platform-v1-compiler-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-
+            platform-v1-compiler-${{ matrix.platform }}-${{ steps.keys.outputs.toolchain }}-
             platform-v1-compiler-${{ matrix.platform }}-
 
-      - name: Restore build directory
+      - name: Restore build
         if: steps.package-cache.outputs.cache-hit != 'true'
         id: build-cache
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: ${{ matrix.build }}
-          key: platform-v1-build-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-${{ steps.inputs.outputs.source }}
+          key: platform-v1-build-${{ matrix.platform }}-${{ steps.keys.outputs.toolchain }}-${{ steps.keys.outputs.source }}
           restore-keys: |
-            platform-v1-build-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-
+            platform-v1-build-${{ matrix.platform }}-${{ steps.keys.outputs.toolchain }}-
             platform-v1-build-${{ matrix.platform }}-
 
-      - name: Set up compiler cache
+      - name: Compiler cache
         if: steps.package-cache.outputs.cache-hit != 'true'
         uses: mozilla-actions/sccache-action@v0.0.9
         with:
           version: v0.17.0
           disable_annotations: true
 
-      - name: Build Windows package
-        if: runner.os == 'Windows' && steps.package-cache.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: ./scripts/build/build-win.ps1 -Toolchain ${{ matrix.toolchain }} -BuildDir ${{ matrix.build }} -BuildJobs 4
+      - name: Dependencies
+        if: steps.package-cache.outputs.cache-hit != 'true'
+        id: deps
+        run: python scripts/build/package.py deps
 
-      - name: Build macOS package
-        if: runner.os == 'macOS' && steps.package-cache.outputs.cache-hit != 'true'
-        id: macos-build
-        run: bash scripts/build/build-macos-ci.sh
-
-      - name: Save macOS Qt after build
-        if: runner.os == 'macOS' && steps.macos-build.outcome == 'success' && steps.qt-cache.outputs.cache-hit != 'true'
+      - name: Save Qt
+        if: steps.deps.outcome == 'success' && steps.qt-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ${{ matrix.qt }}
-          key: platform-v1-qt-${{ matrix.platform }}-6.11.1-quick3d
+          key: platform-v1-qt-${{ matrix.platform }}-6.11.1
 
-      - name: Save macOS FFmpeg after build
-        if: runner.os == 'macOS' && steps.macos-build.outcome == 'success' && steps.media-cache.outputs.cache-hit != 'true'
+      - name: Save FFmpeg
+        if: steps.deps.outcome == 'success' && steps.media-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ${{ matrix.media }}
-          key: platform-v1-media-${{ matrix.platform }}-${{ matrix.version }}-${{ steps.inputs.outputs.recipe }}
+          key: platform-v1-media-${{ matrix.platform }}-${{ matrix.version }}-${{ steps.keys.outputs.recipe }}
 
-      - name: Flush macOS compiler outputs
-        if: runner.os == 'macOS' && steps.macos-build.outcome == 'success'
+      - name: Build
+        if: steps.package-cache.outputs.cache-hit != 'true'
+        id: build
+        run: python scripts/build/package.py build
+
+      - name: Flush compiler
+        if: steps.build.outcome == 'success'
         run: sccache --stop-server
 
-      - name: Save macOS compiler outputs after build
-        if: runner.os == 'macOS' && steps.macos-build.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true'
+      - name: Save compiler
+        if: steps.build.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: .cache/sccache
-          key: platform-v1-compiler-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-${{ steps.inputs.outputs.source }}
+          key: platform-v1-compiler-${{ matrix.platform }}-${{ steps.keys.outputs.toolchain }}-${{ steps.keys.outputs.source }}
 
-      - name: Save macOS build directory after build
-        if: runner.os == 'macOS' && steps.macos-build.outcome == 'success' && steps.build-cache.outputs.cache-hit != 'true'
+      - name: Save build
+        if: steps.build.outcome == 'success' && steps.build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ${{ matrix.build }}
-          key: platform-v1-build-${{ matrix.platform }}-${{ steps.inputs.outputs.toolchain }}-${{ steps.inputs.outputs.source }}
+          key: platform-v1-build-${{ matrix.platform }}-${{ steps.keys.outputs.toolchain }}-${{ steps.keys.outputs.source }}
 
-      - name: Verify Windows package
-        if: runner.os == 'Windows' && steps.package-cache.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          $packages = @(Get-ChildItem dist -Directory -Filter 'MiaCode_*')
-          if ($packages.Count -ne 1) { throw 'Expected one package directory' }
-          $arch = '${{ matrix.platform }}'.Replace('windows-', '')
-          ./scripts/build/verify-win-package.ps1 -DistDir $packages[0].FullName -Arch $arch
+      - name: Artifact name
+        id: artifact
+        run: python scripts/build/package.py artifact
 
-      - name: Verify media and record package
-        if: steps.package-cache.outputs.cache-hit != 'true'
-        env:
-          CI_SOURCE: ${{ steps.inputs.outputs.source }}
-        run: |
-          python scripts/build/ci-package.py verify
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            sccache --stop-server
-          fi
-
-      - name: Check package identity and size
-        id: archive
-        env:
-          CI_SOURCE: ${{ steps.inputs.outputs.source }}
-        run: python scripts/build/ci-package.py check
-
-      - name: Save finished package
+      - name: Save package
         if: steps.package-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: |
-            dist/*.7z
-            dist/verification.json
+          path: dist/*.7z
           key: ${{ steps.package-cache.outputs.cache-primary-key }}
 
-      - name: Upload package
+      - name: Upload
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.archive.outputs.name }}
+          name: ${{ steps.artifact.outputs.name }}
           path: dist/*.7z
           compression-level: 0
           if-no-files-found: error
           retention-days: 14
 
-      - name: Record result and enforce cache budget
+      - name: Summary
         env:
-          CI_PACKAGE_HIT: ${{ steps.package-cache.outputs.cache-hit }}
           CI_EVENT: ${{ github.event_name }}
           CI_TRIGGERED_AT: ${{ github.event.head_commit.timestamp }}
-        run: python scripts/build/ci-package.py report
+        run: python scripts/build/package.py report
