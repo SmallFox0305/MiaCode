@@ -1405,6 +1405,46 @@ Failed: %2</translation>
         <source>Preferences</source>
         <translation>Preferences</translation>
     </message>
+    <message id="dialog.preferences.update.auto_check">
+        <source>Check for updates at startup</source>
+        <translation>Check for updates at startup</translation>
+    </message>
+    <message id="dialog.preferences.update.channel">
+        <source>Update channel</source>
+        <translation>Update channel</translation>
+    </message>
+    <message id="dialog.preferences.update.channel.beta">
+        <source>Beta</source>
+        <translation>Beta</translation>
+    </message>
+    <message id="dialog.preferences.update.channel.stable">
+        <source>Stable</source>
+        <translation>Stable</translation>
+    </message>
+    <message id="dialog.preferences.update.check_now">
+        <source>Check now</source>
+        <translation>Check now</translation>
+    </message>
+    <message id="dialog.preferences.update.failed">
+        <source>Check failed. Try again later.</source>
+        <translation>Check failed. Try again later.</translation>
+    </message>
+    <message id="dialog.preferences.update.last_check">
+        <source>Last checked: %1</source>
+        <translation>Last checked: %1</translation>
+    </message>
+    <message id="dialog.preferences.update.no_package">
+        <source>No update package for this platform</source>
+        <translation>No update package for this platform</translation>
+    </message>
+    <message id="dialog.preferences.update.up_to_date">
+        <source>You are up to date</source>
+        <translation>You are up to date</translation>
+    </message>
+    <message id="dialog.preferences.updates_group">
+        <source>Updates</source>
+        <translation>Updates</translation>
+    </message>
     <message id="dialog.render_settings.audio.answer">
         <source>Answer Volume</source>
         <translation>Answer Volume</translation>

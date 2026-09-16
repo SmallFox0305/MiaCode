@@ -588,6 +588,8 @@ Item {
         shortcuts: root.shortcutModel
         preferences: root.preferences
         appBackground: root.appBackground
+        updateService: root.updates
+        onUpdateRequested: updatePrompt.present()
     }
 
     Connections {

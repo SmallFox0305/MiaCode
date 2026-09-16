@@ -1405,6 +1405,46 @@ Failed: %2</source>
         <source>Preferences</source>
         <translation>設定</translation>
     </message>
+    <message id="dialog.preferences.update.auto_check">
+        <source>Check for updates at startup</source>
+        <translation>起動時にアップデートを確認</translation>
+    </message>
+    <message id="dialog.preferences.update.channel">
+        <source>Update channel</source>
+        <translation>アップデートチャンネル</translation>
+    </message>
+    <message id="dialog.preferences.update.channel.beta">
+        <source>Beta</source>
+        <translation>ベータ版</translation>
+    </message>
+    <message id="dialog.preferences.update.channel.stable">
+        <source>Stable</source>
+        <translation>安定版</translation>
+    </message>
+    <message id="dialog.preferences.update.check_now">
+        <source>Check now</source>
+        <translation>今すぐ確認</translation>
+    </message>
+    <message id="dialog.preferences.update.failed">
+        <source>Check failed. Try again later.</source>
+        <translation>確認に失敗しました。後でもう一度お試しください。</translation>
+    </message>
+    <message id="dialog.preferences.update.last_check">
+        <source>Last checked: %1</source>
+        <translation>最終確認: %1</translation>
+    </message>
+    <message id="dialog.preferences.update.no_package">
+        <source>No update package for this platform</source>
+        <translation>このプラットフォーム用のパッケージはありません</translation>
+    </message>
+    <message id="dialog.preferences.update.up_to_date">
+        <source>You are up to date</source>
+        <translation>最新バージョンです</translation>
+    </message>
+    <message id="dialog.preferences.updates_group">
+        <source>Updates</source>
+        <translation>アップデート</translation>
+    </message>
     <message id="dialog.render_settings.audio.answer">
         <source>Answer Volume</source>
         <translation>Answer</translation>

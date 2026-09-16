@@ -1405,6 +1405,46 @@ Failed: %2</source>
         <source>Preferences</source>
         <translation>首选项</translation>
     </message>
+    <message id="dialog.preferences.update.auto_check">
+        <source>Check for updates at startup</source>
+        <translation>启动时检查更新</translation>
+    </message>
+    <message id="dialog.preferences.update.channel">
+        <source>Update channel</source>
+        <translation>更新通道</translation>
+    </message>
+    <message id="dialog.preferences.update.channel.beta">
+        <source>Beta</source>
+        <translation>预发布版</translation>
+    </message>
+    <message id="dialog.preferences.update.channel.stable">
+        <source>Stable</source>
+        <translation>正式版</translation>
+    </message>
+    <message id="dialog.preferences.update.check_now">
+        <source>Check now</source>
+        <translation>立即检查</translation>
+    </message>
+    <message id="dialog.preferences.update.failed">
+        <source>Check failed. Try again later.</source>
+        <translation>检查失败，请稍后重试</translation>
+    </message>
+    <message id="dialog.preferences.update.last_check">
+        <source>Last checked: %1</source>
+        <translation>上次检查：%1</translation>
+    </message>
+    <message id="dialog.preferences.update.no_package">
+        <source>No update package for this platform</source>
+        <translation>当前平台没有可用的更新包</translation>
+    </message>
+    <message id="dialog.preferences.update.up_to_date">
+        <source>You are up to date</source>
+        <translation>已是最新版本</translation>
+    </message>
+    <message id="dialog.preferences.updates_group">
+        <source>Updates</source>
+        <translation>更新</translation>
+    </message>
     <message id="dialog.render_settings.audio.answer">
         <source>Answer Volume</source>
         <translation>Answer 音量</translation>

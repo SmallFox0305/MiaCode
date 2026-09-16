@@ -18,6 +18,9 @@ AppDialog {
     required property var shortcuts
     required property var preferences
     required property var appBackground
+    property var updateService: null
+
+    signal updateRequested()
 
     title: qsTrId("dialog.preferences.title")
     preferredWidth: 700
@@ -70,7 +73,7 @@ AppDialog {
         Row {
             spacing: 4
             Repeater {
-                model: [qsTrId("qml.interface"), qsTrId("dialog.preferences.background_group"), qsTrId("dialog.preferences.editor_group"), qsTrId("dialog.preferences.performance_group"), qsTrId("dialog.preferences.shortcuts_group")]
+                model: [qsTrId("qml.interface"), qsTrId("dialog.preferences.background_group"), qsTrId("dialog.preferences.editor_group"), qsTrId("dialog.preferences.performance_group"), qsTrId("dialog.preferences.shortcuts_group"), qsTrId("dialog.preferences.updates_group")]
                 delegate: AppTab {
                     required property int index
                     required property string modelData
@@ -433,6 +436,84 @@ AppDialog {
                 onClicked: {
                     root.shortcuts.resetAllShortcuts()
                     root.refreshShortcuts()
+                }
+            }
+        }
+
+        // ---- 更新 ----
+        // A manual check always answers — up to date, no package for this
+        // platform, or failed — because a check the reader started themselves
+        // must not fail silently. An automatic "available" result never lands
+        // here: it only sets updateAvailable, surfaced by the status bar badge.
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: root.activePage === 5
+            spacing: 10
+
+            AppSwitch {
+                objectName: "preferencesUpdateCheckSwitch"
+                text: qsTrId("dialog.preferences.update.auto_check")
+                checked: root.updateService ? root.updateService.checkEnabled : false
+                onToggled: if (root.updateService) root.updateService.checkEnabled = checked
+            }
+
+            LabeledCombo {
+                objectName: "preferencesUpdateChannelCombo"
+                label: qsTrId("dialog.preferences.update.channel")
+                options: [
+                    { value: "stable", label: qsTrId("dialog.preferences.update.channel.stable") },
+                    { value: "beta", label: qsTrId("dialog.preferences.update.channel.beta") }
+                ]
+                currentValue: root.updateService ? root.updateService.effectiveChannel() : "stable"
+                onPicked: function(value) { if (root.updateService) root.updateService.channelToken = value }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                visible: root.updateService && root.updateService.lastCheckText.length > 0
+                text: qsTrId("dialog.preferences.update.last_check").arg(
+                    root.updateService ? root.updateService.lastCheckText : "")
+                color: Theme.colors.text.secondary
+                font.family: Theme.uiFont
+                font.pixelSize: Theme.secondaryFontSize
+                wrapMode: Text.WordWrap
+            }
+
+            RowLayout {
+                spacing: 8
+
+                AppButton {
+                    objectName: "preferencesUpdateCheckNowButton"
+                    text: qsTrId("dialog.preferences.update.check_now")
+                    enabled: root.updateService && !root.updateService.checkInFlight
+                    onClicked: if (root.updateService) root.updateService.checkNow(true)
+                }
+
+                Text {
+                    id: updateManualResult
+                    objectName: "preferencesUpdateManualResultText"
+                    Layout.fillWidth: true
+                    color: Theme.colors.text.secondary
+                    font.family: Theme.uiFont
+                    font.pixelSize: Theme.secondaryFontSize
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            Connections {
+                target: root.updateService
+                function onManualCheckFinished(outcome, detail) {
+                    if (outcome === "available") {
+                        updateManualResult.text = ""
+                        root.updateRequested()
+                        return
+                    }
+                    if (outcome === "up-to-date")
+                        updateManualResult.text = qsTrId("dialog.preferences.update.up_to_date")
+                    else if (outcome === "no-package")
+                        updateManualResult.text = qsTrId("dialog.preferences.update.no_package")
+                    else
+                        updateManualResult.text = qsTrId("dialog.preferences.update.failed")
                 }
             }
         }
