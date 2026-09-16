@@ -288,6 +288,12 @@ def cmake_version(path: pathlib.Path) -> str:
     return version
 
 
+def command_version(args) -> int:
+    """Print the version this commit builds, so a rehearsal can name its tag."""
+    print(cmake_version(pathlib.Path(args.cmakelists)))
+    return 0
+
+
 def command_verify(args) -> int:
     """Does the tag name the version this commit actually builds?
 
@@ -491,6 +497,10 @@ def main():
     published = sub.add_parser("published", help="print the version a downloaded manifest names")
     published.add_argument("--manifest", required=True, help="path to a downloaded channel manifest")
     published.set_defaults(func=command_published)
+
+    version = sub.add_parser("version", help="print the version CMakeLists.txt builds")
+    version.add_argument("--cmakelists", default="CMakeLists.txt", help="path to CMakeLists.txt")
+    version.set_defaults(func=command_version)
 
     verify = sub.add_parser("verify", help="check the tag against the version the build bakes in")
     verify.add_argument("--tag", required=True, help="release tag, e.g. v2.1.0-beta.3")

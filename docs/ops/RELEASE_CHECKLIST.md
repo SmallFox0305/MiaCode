@@ -71,14 +71,28 @@ pre-release; `v2.1.0` publishes as a full release.
 
 ### Rehearsing without publishing
 
-Actions → Release → Run workflow, give it a tag name (it does not have to exist) and
-leave **publish** off. It builds the three packages and generates the manifests exactly
-as a tag push would — same `release` channel, so the archive names match — then prints
-them into the log and uploads them as the `rehearsed-manifests` run artifact. Nothing is
-created: no Release, no tag, no manifest upload.
+Push whatever you want to test to the `ci/release-rehearsal` branch:
 
-Use it after touching the workflow or the manifest script. It also warms the package
-cache under the release key, so a real tag push at the same commit skips the build.
+```bash
+git push --force-with-lease origin HEAD:ci/release-rehearsal
+```
+
+It builds the three packages and generates the manifests exactly as a tag push would —
+same `release` channel, so the archive names and hashes are the ones a release would
+carry — then prints them into the log and uploads them as the `rehearsed-manifests` run
+artifact. Nothing is created: no Release, no tag, no manifest upload. **Only a tag
+publishes**; a branch push never does, whatever it is named.
+
+It rehearses `v` + the version in CMakeLists.txt, which is the only tag the guard would
+accept for that commit anyway.
+
+Once this workflow reaches the default branch, Actions → Release → Run workflow offers
+the same thing with an explicit tag. It is a branch push rather than that because GitHub
+only offers `workflow_dispatch` for workflows already on the default branch, and the
+rehearsal has to work from the branch that changes the workflow.
+
+The rehearsal also warms the package cache under the release key, so a real tag push at
+the same commit skips the build.
 
 ## Update Manifest
 
