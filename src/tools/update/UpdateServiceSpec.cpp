@@ -306,6 +306,39 @@ int main(int argc, char** argv)
                      QStringLiteral("a stored check time in the future does not wedge automatic checks"), err);
     }
     {
+        // 记住的版本只够点亮标记，详情要等一次检查才有。节流是为了不反复打扰
+        // 服务器，不是为了让一个亮着的标记一整天点不开 —— 那比不提示更糟：
+        // 用户点开对话框，只看到一个禁用的下载按钮。
+        FakeFetcher fetcher;
+        MemoryStore store;
+        store.known = QStringLiteral("2.1.0");
+        store.checkedAt = QDateTime::currentDateTimeUtc().addSecs(-60);
+        store.outcome = QStringLiteral("ok");
+        fetcher.nextPayload = manifestPayload(QStringLiteral("2.1.0"));
+        UpdateService service(fetcher, store, testEnvironment());
+        ok &= expect(service.updateAvailable()
+                         && service.availableDetail()
+                                .value(QStringLiteral("releasePageUrl")).toString().isEmpty(),
+                     QStringLiteral("a remembered version lights the badge before any detail exists"), err);
+        service.checkNow(false);
+        ok &= expect(fetcher.fetchCount == 1,
+                     QStringLiteral("the throttle gives way while the badge has no detail to show"), err);
+        ok &= expect(!service.availableDetail()
+                          .value(QStringLiteral("releasePageUrl")).toString().isEmpty(),
+                     QStringLiteral("the refetch fills in the detail the badge promised"), err);
+    }
+    {
+        // 上面那条例外不能退化成「每次启动都检查」：详情到手之后节流照常生效。
+        FakeFetcher fetcher;
+        MemoryStore store;
+        fetcher.nextPayload = manifestPayload(QStringLiteral("2.1.0"));
+        UpdateService service(fetcher, store, testEnvironment());
+        service.checkNow(true);
+        service.checkNow(false);
+        ok &= expect(fetcher.fetchCount == 1,
+                     QStringLiteral("once the detail is in hand the throttle applies again"), err);
+    }
+    {
         FakeFetcher fetcher;
         MemoryStore store;
         store.enabled = false;

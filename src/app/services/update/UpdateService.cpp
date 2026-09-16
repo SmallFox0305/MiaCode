@@ -171,7 +171,11 @@ void UpdateService::checkNow(bool manual)
         return;
     }
     if (!manual) {
-        if (!store_.checkEnabled() || !throttleAllows()) {
+        // restoreKnownFinding() 只恢复得出版本号，详情要靠一次检查补上。节流
+        // 是为了不反复打扰服务器，不是为了让一个已经亮起的标记一整天点不开 ——
+        // 那比不提示更糟：用户点开对话框，只看到一个禁用的下载按钮。
+        const bool needsDetail = updateAvailable_ && finding_.releasePageUrl.isEmpty();
+        if (!store_.checkEnabled() || (!needsDetail && !throttleAllows())) {
             return;
         }
     }
