@@ -25,6 +25,7 @@ Item {
     readonly property var preferencesModel: applicationContext.preferencesModel
     readonly property var latency: applicationContext.latency
     readonly property var shortcutModel: applicationContext.shortcuts
+    readonly property var updates: applicationContext.update
     readonly property string documentTitle: {
         if (!documentSession.hasDocument)
             return ""
@@ -326,6 +327,9 @@ Item {
             selectionBeatTooltip: splitView.selectionBeatTooltipText
             metadataActive: state.metadataEditorActive && !root.pages.overlayActive
             difficultyActive: state.difficultyEditorActive && !root.pages.overlayActive
+            updateAvailable: root.updates ? root.updates.updateAvailable : false
+            updateVersion: root.updates ? root.updates.availableVersion : ""
+            onUpdateActivated: updatePrompt.present()
         }
     }
 
@@ -377,6 +381,49 @@ Item {
         details: qsTrId("qml.this_entry_will_remain_here_and_become_available_when_the_featur")
         choices: [{ id: "ok", label: qsTrId("action.ok"), role: "accept" }]
         dismissChoiceId: "ok"
+    }
+
+    // The only passive signal for an available update is the status bar badge;
+    // this dialog opens only when the reader asks for it (badge click or the
+    // About dialog's hint), never on its own.
+    ChoiceDialog {
+        id: updatePrompt
+        objectName: "shellUpdateAvailableDialog"
+
+        function present() {
+            if (!root.updates || !root.updates.updateAvailable)
+                return
+            const detail = root.updates.availableDetail()
+            title = qsTrId("dialog.update.title")
+            message = qsTrId("dialog.update.message").arg(detail.version)
+            let lines = []
+            if (detail.releasedAt)
+                lines.push(qsTrId("dialog.update.released").arg(detail.releasedAt))
+            if (detail.sizeText)
+                lines.push(qsTrId("dialog.update.size").arg(detail.sizeText))
+            if (detail.notes)
+                lines.push(detail.notes)
+            details = lines.join("\n")
+            // On launch the service can restore a remembered version before the
+            // network check completes, so releasePageUrl can still be empty here.
+            // Disable rather than hide the button so the dialog's shape stays
+            // stable and nothing silently no-ops.
+            choices = [
+                { id: "download", label: qsTrId("dialog.update.download"), role: "accept",
+                  enabled: !!detail.releasePageUrl },
+                { id: "later", label: qsTrId("action.later"), role: "reject" },
+                { id: "skip", label: qsTrId("dialog.update.skip"), role: "reject" }
+            ]
+            dismissChoiceId = "later"
+            open()
+        }
+
+        onChosen: choiceId => {
+            if (choiceId === "download")
+                root.updates.openDownloadPage()
+            else if (choiceId === "skip")
+                root.updates.skipAvailableVersion()
+        }
     }
 
     Connections {
@@ -530,6 +577,8 @@ Item {
         id: aboutDialog
         objectName: "shellAboutDialog"
         preferences: root.preferences
+        updateService: root.updates
+        onUpdateRequested: updatePrompt.present()
     }
 
     PreferencesDialog {

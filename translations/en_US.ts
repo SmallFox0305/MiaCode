@@ -55,6 +55,10 @@
         <source>Export Cover</source>
         <translation>Export Cover</translation>
     </message>
+    <message id="action.later">
+        <source>Later</source>
+        <translation>Later</translation>
+    </message>
     <message id="action.new">
         <source>New</source>
         <translation>New</translation>
@@ -1840,6 +1844,30 @@ Restore the backup from %1?</translation>
     <message id="dialog.unsaved_tab_changes.title">
         <source>Save Changes</source>
         <translation>Save Changes</translation>
+    </message>
+    <message id="dialog.update.download">
+        <source>Open download page</source>
+        <translation>Open download page</translation>
+    </message>
+    <message id="dialog.update.message">
+        <source>MiaCode %1 has been released.</source>
+        <translation>MiaCode %1 has been released.</translation>
+    </message>
+    <message id="dialog.update.released">
+        <source>Released: %1</source>
+        <translation>Released: %1</translation>
+    </message>
+    <message id="dialog.update.size">
+        <source>Download size: %1</source>
+        <translation>Download size: %1</translation>
+    </message>
+    <message id="dialog.update.skip">
+        <source>Skip this version</source>
+        <translation>Skip this version</translation>
+    </message>
+    <message id="dialog.update.title">
+        <source>Update available</source>
+        <translation>Update available</translation>
     </message>
     <message id="dialog.video_export.audio_bitrate">
         <source>Audio quality</source>
@@ -4728,6 +4756,10 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
     <message id="status.touch_trail_enabled">
         <source>Touch trail enabled.</source>
         <translation>Touch trail enabled.</translation>
+    </message>
+    <message id="status.update_available">
+        <source>Version %1 available</source>
+        <translation>Version %1 available</translation>
     </message>
     <message id="tab.timeline">
         <source>Timeline</source>

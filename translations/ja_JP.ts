@@ -55,6 +55,10 @@
         <source>Export Cover</source>
         <translation>ジャケット出力</translation>
     </message>
+    <message id="action.later">
+        <source>Later</source>
+        <translation>後で</translation>
+    </message>
     <message id="action.new">
         <source>New</source>
         <translation>新規</translation>
@@ -1840,6 +1844,30 @@ Restore the backup from %1?</source>
     <message id="dialog.unsaved_tab_changes.title">
         <source>Save Changes</source>
         <translation>変更の保存</translation>
+    </message>
+    <message id="dialog.update.download">
+        <source>Open download page</source>
+        <translation>ダウンロードページを開く</translation>
+    </message>
+    <message id="dialog.update.message">
+        <source>MiaCode %1 has been released.</source>
+        <translation>MiaCode %1 がリリースされました。</translation>
+    </message>
+    <message id="dialog.update.released">
+        <source>Released: %1</source>
+        <translation>リリース日: %1</translation>
+    </message>
+    <message id="dialog.update.size">
+        <source>Download size: %1</source>
+        <translation>ダウンロードサイズ: %1</translation>
+    </message>
+    <message id="dialog.update.skip">
+        <source>Skip this version</source>
+        <translation>このバージョンをスキップ</translation>
+    </message>
+    <message id="dialog.update.title">
+        <source>Update available</source>
+        <translation>アップデートがあります</translation>
     </message>
     <message id="dialog.video_export.audio_bitrate">
         <source>Audio quality</source>
@@ -4728,6 +4756,10 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
     <message id="status.touch_trail_enabled">
         <source>Touch trail enabled.</source>
         <translation>Touch 軌跡を表示しました</translation>
+    </message>
+    <message id="status.update_available">
+        <source>Version %1 available</source>
+        <translation>新しいバージョン %1</translation>
     </message>
     <message id="tab.timeline">
         <source>Timeline</source>

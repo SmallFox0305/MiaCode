@@ -55,6 +55,10 @@
         <source>Export Cover</source>
         <translation>导出封面</translation>
     </message>
+    <message id="action.later">
+        <source>Later</source>
+        <translation>以后再说</translation>
+    </message>
     <message id="action.new">
         <source>New</source>
         <translation>新建</translation>
@@ -1840,6 +1844,30 @@ Restore the backup from %1?</source>
     <message id="dialog.unsaved_tab_changes.title">
         <source>Save Changes</source>
         <translation>保存修改</translation>
+    </message>
+    <message id="dialog.update.download">
+        <source>Open download page</source>
+        <translation>打开下载页</translation>
+    </message>
+    <message id="dialog.update.message">
+        <source>MiaCode %1 has been released.</source>
+        <translation>MiaCode %1 已发布。</translation>
+    </message>
+    <message id="dialog.update.released">
+        <source>Released: %1</source>
+        <translation>发布日期：%1</translation>
+    </message>
+    <message id="dialog.update.size">
+        <source>Download size: %1</source>
+        <translation>下载大小：%1</translation>
+    </message>
+    <message id="dialog.update.skip">
+        <source>Skip this version</source>
+        <translation>跳过此版本</translation>
+    </message>
+    <message id="dialog.update.title">
+        <source>Update available</source>
+        <translation>有可用更新</translation>
     </message>
     <message id="dialog.video_export.audio_bitrate">
         <source>Audio quality</source>
@@ -4728,6 +4756,10 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
     <message id="status.touch_trail_enabled">
         <source>Touch trail enabled.</source>
         <translation>Touch 轨迹已开启</translation>
+    </message>
+    <message id="status.update_available">
+        <source>Version %1 available</source>
+        <translation>有新版本 %1</translation>
     </message>
     <message id="tab.timeline">
         <source>Timeline</source>

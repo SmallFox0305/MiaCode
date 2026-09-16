@@ -13,6 +13,10 @@ Rectangle {
     property string selectionBeatTooltip: ""
     property bool metadataActive: false
     property bool difficultyActive: false
+    property bool updateAvailable: false
+    property string updateVersion: ""
+
+    signal updateActivated()
 
     implicitHeight: 23
     color: Theme.surfaceColor(Theme.colors.background.statusBar)
@@ -38,6 +42,20 @@ Rectangle {
             elide: Text.ElideMiddle
         }
         Item { Layout.fillWidth: root.documentName.length === 0 }
+
+        StatusText {
+            objectName: "statusBarUpdateBadge"
+            visible: root.updateAvailable
+            text: qsTrId("status.update_available").arg(root.updateVersion)
+            color: Theme.colors.text.active
+            Layout.preferredWidth: implicitWidth
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.updateActivated()
+            }
+        }
 
         StatusText {
             text: "metadata"

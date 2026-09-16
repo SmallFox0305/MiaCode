@@ -9,6 +9,9 @@ AppDialog {
     id: root
 
     required property var preferences
+    property var updateService: null
+
+    signal updateRequested()
 
     readonly property var info: preferences.aboutInfo()
 
@@ -48,6 +51,21 @@ AppDialog {
                     objectName: "aboutVersion"
                     text: "v" + root.info.version
                     color: Theme.colors.text.secondary
+                }
+                Text {
+                    objectName: "aboutUpdateHint"
+                    visible: root.updateService && root.updateService.updateAvailable
+                    text: qsTrId("status.update_available").arg(
+                        root.updateService ? root.updateService.availableVersion : "")
+                    color: Theme.colors.text.active
+                    font.family: Theme.uiFont
+                    font.pixelSize: Theme.secondaryFontSize
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.updateRequested()
+                    }
                 }
             }
             Item { Layout.fillWidth: true }
