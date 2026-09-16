@@ -69,6 +69,17 @@ pre-release; `v2.1.0` publishes as a full release.
 - [ ] Add platform support, known issues, non-commercial positioning, and license notes
       to the release body. `--generate-notes` only writes the commit list.
 
+### Rehearsing without publishing
+
+Actions → Release → Run workflow, give it a tag name (it does not have to exist) and
+leave **publish** off. It builds the three packages and generates the manifests exactly
+as a tag push would — same `release` channel, so the archive names match — then prints
+them into the log and uploads them as the `rehearsed-manifests` run artifact. Nothing is
+created: no Release, no tag, no manifest upload.
+
+Use it after touching the workflow or the manifest script. It also warms the package
+cache under the release key, so a real tag push at the same commit skips the build.
+
 ## Update Manifest
 
 The in-app update check reads one fixed URL per major version and channel:

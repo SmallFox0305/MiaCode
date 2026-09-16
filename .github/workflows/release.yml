@@ -1,13 +1,30 @@
 name: Release
-run-name: release · ${{ github.ref_name }}
+run-name: ${{ (github.event_name == 'push' || inputs.publish) && 'release' || 'rehearsal' }} · ${{ inputs.tag || github.ref_name }}
 
 on:
   push:
     tags: ["v*"]
+  # A rehearsal: everything a tag push does, except that nothing is published.
+  # The manifests it would have uploaded come back as a run artifact instead.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to rehearse, e.g. v2.0.0-beta.1. It does not have to exist yet."
+        required: true
+        type: string
+      publish:
+        description: "Really create the Release and refresh the channel manifests."
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   actions: read
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  # A tag push always publishes; a dispatch only when asked.
+  PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
 
 concurrency:
   group: release-${{ github.ref }}
@@ -27,8 +44,6 @@ jobs:
           lfs: false
 
       - name: Check the tag against the build version
-        env:
-          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           python3 scripts/release/update-manifest.py selfcheck
@@ -44,6 +59,7 @@ jobs:
       channel: release
 
   publish:
+    name: ${{ (github.event_name == 'push' || inputs.publish) && 'publish' || 'rehearse' }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -62,7 +78,6 @@ jobs:
       - name: Read the published channel versions
         id: channels
         env:
-          TAG: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -92,7 +107,6 @@ jobs:
       # the run instead of leaving a half-published release behind.
       - name: Generate the manifests
         env:
-          TAG: ${{ github.ref_name }}
           CURRENT_STABLE: ${{ steps.channels.outputs.stable }}
           CURRENT_BETA: ${{ steps.channels.outputs.beta }}
         run: |
@@ -108,9 +122,9 @@ jobs:
             --current-beta-version "$CURRENT_BETA"
 
       - name: Publish the release
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           mapfile -t -d '' packages < <(find artifacts -name '*.7z' -print0)
@@ -131,6 +145,7 @@ jobs:
           gh release upload "$TAG" "${packages[@]}" --clobber
 
       - name: Publish the manifests
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -149,3 +164,29 @@ jobs:
               --notes "Assets the in-app update check reads. Not a downloadable version. Refreshed by release.yml."
           fi
           gh release upload channel-manifest "${files[@]}" --clobber
+
+      # What a rehearsal hands back: the manifests a real run would have
+      # uploaded, byte for byte apart from releasedAt.
+      - name: Show what a release would have published
+        if: env.PUBLISH != 'true'
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(manifests/*.json)
+          if (( ${#files[@]} == 0 )); then
+            echo "no channel would move forward; nothing would be published"
+            exit 0
+          fi
+          for file in "${files[@]}"; do
+            echo "=== $file"
+            cat "$file"
+          done
+
+      - name: Upload the rehearsed manifests
+        if: env.PUBLISH != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: rehearsed-manifests
+          path: manifests/
+          if-no-files-found: ignore
+          retention-days: 14
