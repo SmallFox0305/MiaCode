@@ -1,0 +1,151 @@
+name: Release
+run-name: release · ${{ github.ref_name }}
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Cheap, and it runs before three hours of builds: a tag ahead of
+  # CMakeLists.txt would package the old version under the new name, and every
+  # client would then keep offering itself the same update forever.
+  guard:
+    name: tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          lfs: false
+
+      - name: Check the tag against the build version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release/update-manifest.py selfcheck
+          python3 scripts/release/update-manifest.py verify --tag "$TAG"
+
+  build:
+    needs: guard
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/package.yml
+    with:
+      channel: release
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          lfs: false
+
+      - name: Download packages
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - name: Read the published channel versions
+        id: channels
+        env:
+          TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          major="${TAG#v}"
+          major="${major%%.*}"
+          base="https://github.com/$REPOSITORY/releases/download/channel-manifest"
+          for channel in stable beta; do
+            file="published-$channel.json"
+            code="$(curl -sL -o "$file" -w '%{http_code}' "$base/$major-$channel.json" || echo 000)"
+            case "$code" in
+              404)
+                # Nobody has published this channel yet.
+                version="" ;;
+              200)
+                version="$(python3 scripts/release/update-manifest.py published --manifest "$file")" ;;
+              *)
+                # Treating a transient failure as an empty channel would let this
+                # tag overwrite a manifest that is newer than it.
+                echo "cannot read $major-$channel.json (HTTP $code)" >&2
+                exit 1 ;;
+            esac
+            echo "$channel=$version" >> "$GITHUB_OUTPUT"
+            echo "$channel currently publishes ${version:-nothing}"
+          done
+
+      # Before the release exists, so a manifest this tag cannot produce fails
+      # the run instead of leaving a half-published release behind.
+      - name: Generate the manifests
+        env:
+          TAG: ${{ github.ref_name }}
+          CURRENT_STABLE: ${{ steps.channels.outputs.stable }}
+          CURRENT_BETA: ${{ steps.channels.outputs.beta }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release/update-manifest.py selfcheck
+          python3 scripts/release/update-manifest.py generate \
+            --tag "$TAG" \
+            --packages artifacts \
+            --out manifests \
+            --released-at "$(date -u +%F)" \
+            --changelog CHANGELOG.md \
+            --current-stable-version "$CURRENT_STABLE" \
+            --current-beta-version "$CURRENT_BETA"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mapfile -t -d '' packages < <(find artifacts -name '*.7z' -print0)
+          if (( ${#packages[@]} == 0 )); then
+            echo "no package to publish" >&2
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists; uploading into it"
+          else
+            # A tag carrying a prerelease identifier publishes as a pre-release.
+            prerelease=""
+            if [[ "$TAG" == *-* ]]; then
+              prerelease="--prerelease"
+            fi
+            gh release create "$TAG" $prerelease --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" "${packages[@]}" --clobber
+
+      - name: Publish the manifests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(manifests/*.json)
+          if (( ${#files[@]} == 0 )); then
+            echo "no channel moved forward; the published manifests stay as they are"
+            exit 0
+          fi
+          # The manifests hang off one permanent release, which must stay marked
+          # as a prerelease: GitHub's "Latest" badge takes the newest release
+          # that is neither draft nor prerelease, and this one is not a build.
+          if ! gh release view channel-manifest >/dev/null 2>&1; then
+            gh release create channel-manifest --prerelease --title "Update manifests" \
+              --notes "Assets the in-app update check reads. Not a downloadable version. Refreshed by release.yml."
+          fi
+          gh release upload channel-manifest "${files[@]}" --clobber

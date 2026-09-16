@@ -52,12 +52,22 @@ shasum -a 256 dist/*.zip
 
 ## Publish
 
+Pushing a `v*` tag runs [release.yml](../../.github/workflows/release.yml): it builds the
+three platform packages, creates the Release with them attached, and refreshes the update
+manifests. A tag carrying a prerelease identifier (`v2.1.0-beta.3`) publishes as a
+pre-release; `v2.1.0` publishes as a full release.
+
+- [ ] Confirm `MIACODE_VERSION_*` in CMakeLists.txt already names the version you are
+      about to tag. The `tag` job checks this before the build starts, because a tag
+      ahead of CMakeLists.txt packages the old version under the new name and every
+      client then keeps offering itself the same update forever.
+- [ ] Add the `## <version>` section to CHANGELOG.md before tagging — the manifest lifts
+      its `zh_CN` release notes from that section. Other languages need `--notes`.
 - [ ] Create a signed tag if signing is part of the release process.
-- [ ] Upload release zip files and checksums.
-- [ ] Include platform support, known issues, non-commercial positioning, and license notes in release notes.
-- [ ] Mark the release as prerelease.
-- [ ] Refresh the update manifest by hand — see below. Skipping this is silent: the
-      client reports a failed check, not a missing one.
+- [ ] Push the tag, then watch the run: three `.7z` assets uploaded, and the manifest
+      assets refreshed (or deliberately not — see below).
+- [ ] Add platform support, known issues, non-commercial positioning, and license notes
+      to the release body. `--generate-notes` only writes the commit list.
 
 ## Update Manifest
 
@@ -99,11 +109,44 @@ Platform keys must match `.github/workflows/package.yml`'s matrix exactly
 (`macos-arm64`, `windows-x64`, `windows-arm64`); a key the client cannot match reads as
 "no package for this platform".
 
-**This step is manual today.** Generating it from the release pipeline was planned, but
-that plan reads a per-platform `dist/verification.json` for each package's size, hash and
-tag, and the packaging rewrite that consolidated everything into
-`scripts/build/package.py` removed that artifact. `package.py artifact` now emits only the
-archive filename and `package.py report` only a human-readable summary, so no step
-currently produces the size and hash a manifest needs. Automating this requires deciding
-where those values come from first — either a new `package.py` subcommand or computing
-them from the uploaded asset.
+### How it is produced
+
+[release.yml](../../.github/workflows/release.yml) generates the manifests with
+[scripts/release/update-manifest.py](../../scripts/release/update-manifest.py). Size and
+hash are computed from the archives the run is about to publish, so no separate record
+can disagree with the assets.
+
+**A channel only ever moves forward**, because a client has no way to downgrade:
+
+| Tag | stable | beta |
+| --- | --- | --- |
+| Release, newer than both | refreshed | refreshed |
+| Release, older than the newest beta | refreshed | left alone |
+| Prerelease, newer than both | left alone | refreshed |
+| Anything not newer than what a channel publishes | left alone | left alone |
+
+So `beta` always holds the higher of (stable, beta), and a beta user lands on a release
+as soon as the release outranks the newest beta. A run that moves no channel says
+`no channel moved forward` and publishes nothing — that is a success, not a failure.
+
+The release job fails rather than publishing a manifest when a platform has no package
+(pass `--allow-partial` if a one-platform release is intended), when an archive name does
+not match the tagged version, or when the manifest would exceed the 64 KiB the client
+accepts.
+
+### Refreshing it by hand
+
+Only needed when a release was published outside the workflow, or when a manifest has to
+be corrected without a new tag:
+
+```bash
+python3 scripts/release/update-manifest.py generate \
+  --tag v2.1.0-beta.3 --packages dist --out manifests \
+  --released-at "$(date -u +%F)" --changelog CHANGELOG.md \
+  --current-stable-version 2.0.0 --current-beta-version 2.1.0-beta.2
+gh release upload channel-manifest manifests/*.json --clobber
+```
+
+`python3 scripts/release/update-manifest.py selfcheck` asserts the version rules against
+the same cases as `src/tools/update/UpdateVersionSpec.cpp`; run it after touching either
+side, since the C++ and Python comparisons are separate implementations.

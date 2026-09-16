@@ -182,6 +182,10 @@ scripts/ffmpeg/trim/ffmpeg-codec-survey.txt
 # HUD font subsetting toolchain (script + 通用规范汉字表 charset + docs).
 !scripts/governance/
 !scripts/governance/*.py
+# Release pipeline: the update manifests release.yml generates and publishes.
+!scripts/release/
+scripts/release/*
+!scripts/release/update-manifest.py
 !scripts/README.md
 !scripts/README_EN.md
 # Ignore local Claude config, but version-control the repo-guide skill.

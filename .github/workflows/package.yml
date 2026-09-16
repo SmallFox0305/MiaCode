@@ -1,10 +1,18 @@
 name: Platform packages
-run-name: nightly · ${{ github.ref_name }} · ${{ github.sha }}
+run-name: ${{ inputs.channel || 'nightly' }} · ${{ github.ref_name }} · ${{ github.sha }}
 
 on:
   push:
     branches: [dev, feature/qml-ui, ci/platform-package-refactor]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      channel:
+        description: >-
+          Channel segment for the package name. "release" means no segment at
+          all, which is the name a Release asset carries.
+        type: string
+        default: nightly
 
 permissions:
   contents: read
@@ -48,7 +56,7 @@ jobs:
       run:
         shell: bash
     env:
-      MIACODE_PACKAGE_CHANNEL: nightly
+      CI_CHANNEL: ${{ inputs.channel || 'nightly' }}
       GIT_LFS_SKIP_SMUDGE: "1"
       SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
       CMAKE_C_COMPILER_LAUNCHER: sccache
@@ -62,6 +70,16 @@ jobs:
       - name: Start timing
         run: echo "CI_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
 
+      - name: Package channel
+        run: |
+          # "release" means no channel segment at all: a Release asset is
+          # MiaCode_<version>_<os>_<arch>.7z, with nothing in between.
+          value="$CI_CHANNEL"
+          if [[ "$value" == "release" ]]; then
+            value=""
+          fi
+          echo "MIACODE_PACKAGE_CHANNEL=$value" >> "$GITHUB_ENV"
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -71,12 +89,15 @@ jobs:
         id: keys
         run: python scripts/build/package.py keys
 
+      # The channel is part of the key because it changes the archive name a
+      # cache hit restores, and a release must never hand out a nightly-named
+      # package built from the same source.
       - name: Restore package
         id: package-cache
         uses: actions/cache/restore@v6
         with:
           path: dist/*.7z
-          key: platform-v1-package-${{ matrix.platform }}-${{ steps.keys.outputs.source }}
+          key: platform-v1-package-${{ matrix.platform }}-${{ env.CI_CHANNEL }}-${{ steps.keys.outputs.source }}
 
       - name: Fetch assets
         if: steps.package-cache.outputs.cache-hit != 'true'
