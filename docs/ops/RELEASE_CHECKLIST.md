@@ -56,3 +56,54 @@ shasum -a 256 dist/*.zip
 - [ ] Upload release zip files and checksums.
 - [ ] Include platform support, known issues, non-commercial positioning, and license notes in release notes.
 - [ ] Mark the release as prerelease.
+- [ ] Refresh the update manifest by hand — see below. Skipping this is silent: the
+      client reports a failed check, not a missing one.
+
+## Update Manifest
+
+The in-app update check reads one fixed URL per major version and channel:
+
+```
+https://github.com/fanfaredash/MiaCode/releases/download/channel-manifest/<major>-<channel>.json
+```
+
+`<channel>` is `stable` or `beta`. The assets hang off a permanent `channel-manifest`
+release, which **must stay marked prerelease** so GitHub's "Latest" badge keeps pointing
+at a real build.
+
+The client accepts `schema` 1 and ignores anything higher. It requires `schema`, `major`
+and `version` to be whole numbers / a parseable semver, a `releasePageUrl` that is valid
+**https**, and a `platforms` entry for its own key that is an object carrying a non-empty
+`file` and `url`. Anything else is treated as "nothing to offer", so a malformed manifest
+is silently inert rather than loud.
+
+```json
+{
+  "schema": 1,
+  "channel": "beta",
+  "major": 2,
+  "version": "2.1.0-beta.3",
+  "releasedAt": "2026-09-20",
+  "releasePageUrl": "https://github.com/fanfaredash/MiaCode/releases/tag/v2.1.0-beta.3",
+  "mandatory": false,
+  "notes": { "zh_CN": "...", "en_US": "..." },
+  "platforms": {
+    "macos-arm64":   { "file": "...7z", "bytes": 0, "sha256": "...", "url": "https://..." },
+    "windows-x64":   { "file": "...7z", "bytes": 0, "sha256": "...", "url": "https://..." },
+    "windows-arm64": { "file": "...7z", "bytes": 0, "sha256": "...", "url": "https://..." }
+  }
+}
+```
+
+Platform keys must match `.github/workflows/package.yml`'s matrix exactly
+(`macos-arm64`, `windows-x64`, `windows-arm64`); a key the client cannot match reads as
+"no package for this platform".
+
+**This step is manual today.** Generating it from the release pipeline was planned, but
+that plan reads a per-platform `dist/verification.json` for each package's size, hash and
+tag, and the packaging rewrite that consolidated everything into
+`scripts/build/package.py` removed that artifact. `package.py artifact` now emits only the
+archive filename and `package.py report` only a human-readable summary, so no step
+currently produces the size and hash a manifest needs. Automating this requires deciding
+where those values come from first — either a new `package.py` subcommand or computing
+them from the uploaded asset.
