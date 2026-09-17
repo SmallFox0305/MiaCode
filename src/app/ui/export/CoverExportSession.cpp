@@ -915,9 +915,42 @@ void CoverExportSession::setResolutionIndex(int index)
 }
 void CoverExportSession::setOutputDirectory(const QString& path)
 {
-    const QString next = QDir::cleanPath(path.trimmed());
-    if (next.isEmpty() || outputDirectory_ == next) return;
+    QString input = path.trimmed();
+    if (input.isEmpty()) return;
+#ifndef Q_OS_WIN
+    if (input == QStringLiteral("~") || input.startsWith(QStringLiteral("~/"))) {
+        input = QDir::homePath() + input.mid(1);
+    }
+#endif
+    // A relative folder is read against the chart folder — the same base the
+    // field displays it against — never against the process working directory.
+    const QString chartFolder = task_.chartPath.isEmpty() ? QString() : QFileInfo(task_.chartPath).absolutePath();
+    if (QDir::isRelativePath(input) && !chartFolder.isEmpty()) {
+        input = QDir(chartFolder).absoluteFilePath(input);
+    }
+    const QString next = QDir::cleanPath(input);
+    if (outputDirectory_ == next) return;
     outputDirectory_ = next; emit outputChanged(); persistComposition();
+}
+
+QString CoverExportSession::outputDirectoryDisplay() const
+{
+    if (outputDirectory_.isEmpty()) return {};
+    if (!task_.chartPath.isEmpty()) {
+        const QString relative = QDir(QFileInfo(task_.chartPath).absolutePath()).relativeFilePath(outputDirectory_);
+        if (relative == QStringLiteral(".")) return relative;
+        if (QDir::isRelativePath(relative) && !relative.startsWith(QStringLiteral(".."))) {
+            return relative;
+        }
+    }
+#ifndef Q_OS_WIN
+    const QString home = QDir::homePath();
+    if (outputDirectory_ == home) return QStringLiteral("~");
+    if (outputDirectory_.startsWith(home + QLatin1Char('/'))) {
+        return QStringLiteral("~") + outputDirectory_.mid(home.size());
+    }
+#endif
+    return QDir::toNativeSeparators(outputDirectory_);
 }
 
 void CoverExportSession::browseBackgroundImage()

@@ -275,6 +275,10 @@
         <source>Blur background</source>
         <translation>背景虚化</translation>
     </message>
+    <message id="cover.body_font">
+        <source>Body</source>
+        <translation>正文</translation>
+    </message>
     <message id="cover.bold">
         <source>Bold</source>
         <translation>加粗</translation>
@@ -397,6 +401,10 @@
         <source>Custom image</source>
         <translation>自定义图片</translation>
     </message>
+    <message id="cover.delete_layer">
+        <source>Delete layer</source>
+        <translation>删除图层</translation>
+    </message>
     <message id="cover.delete_preset">
         <source>Delete preset</source>
         <translation>删除预设</translation>
@@ -507,6 +515,10 @@
         <source>Import layout file…</source>
         <translation>导入布局文件…</translation>
     </message>
+    <message id="cover.inner">
+        <source>Inner</source>
+        <translation>内圈</translation>
+    </message>
     <message id="cover.inner_bg">
         <source>Inner bg</source>
         <translation>内圈背景</translation>
@@ -516,8 +528,8 @@
         <translation>曲绘</translation>
     </message>
     <message id="cover.keep_size_ellipsis">
-        <source>Keep size, ellipsis (…)</source>
-        <translation>保持字号，省略号(…)截断</translation>
+        <source>Ellipsis (…)</source>
+        <translation>省略号截断</translation>
     </message>
     <message id="cover.layer">
         <source>Layer</source>
@@ -539,6 +551,10 @@
         <source>Layout ▾</source>
         <translation>布局 ▾</translation>
     </message>
+    <message id="cover.level_as_text">
+        <source>Level as text</source>
+        <translation>等级含字母</translation>
+    </message>
     <message id="cover.lock">
         <source>Lock</source>
         <translation>锁定</translation>
@@ -554,6 +570,10 @@
     <message id="cover.long_text">
         <source>Long text</source>
         <translation>文字超长</translation>
+    </message>
+    <message id="cover.long_text_label">
+        <source>Long text</source>
+        <translation>长文字</translation>
     </message>
     <message id="cover.manage_presets">
         <source>Manage presets...</source>
@@ -591,6 +611,10 @@
         <source>Open recent</source>
         <translation>最近打开</translation>
     </message>
+    <message id="cover.output">
+        <source>Output</source>
+        <translation>输出</translation>
+    </message>
     <message id="cover.play_pause_space">
         <source>Play / pause (Space)</source>
         <translation>播放 / 暂停（空格）</translation>
@@ -602,6 +626,10 @@
     <message id="cover.preset_name">
         <source>Preset name:</source>
         <translation>预设名称：</translation>
+    </message>
+    <message id="cover.presets">
+        <source>Presets</source>
+        <translation>预设</translation>
     </message>
     <message id="cover.pure_chart_frame">
         <source>Pure chart frame</source>
@@ -675,6 +703,10 @@
         <source>Send to back</source>
         <translation>置底</translation>
     </message>
+    <message id="cover.shadow">
+        <source>Shadow</source>
+        <translation>阴影</translation>
+    </message>
     <message id="cover.show">
         <source>Show</source>
         <translation>显示</translation>
@@ -689,7 +721,7 @@
     </message>
     <message id="cover.shrink_to_fit">
         <source>Shrink to fit</source>
-        <translation>缩小字体以放入全部</translation>
+        <translation>缩小字号</translation>
     </message>
     <message id="cover.size">
         <source>Size</source>
@@ -746,6 +778,10 @@
     <message id="cover.this_preset_needs_a_renderable">
         <source>This preset needs a renderable chart frame</source>
         <translation>该预设需要可渲染的谱面帧</translation>
+    </message>
+    <message id="cover.title_font">
+        <source>Title</source>
+        <translation>标题</translation>
     </message>
     <message id="cover.transparency">
         <source>Transparency</source>

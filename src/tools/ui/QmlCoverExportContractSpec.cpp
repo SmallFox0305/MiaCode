@@ -345,21 +345,32 @@ int main(int argc, char** argv)
            QStringLiteral("the live chart loader synchronizes binder and item lifetimes"), out, &failed);
     expect(!page.contains(QStringLiteral("text: UiText.text(\"cover.difficulty_card\")"))
                && page.contains(QStringLiteral("id: cardSettings"))
+               && page.contains(QStringLiteral("visible: root.cardLayerActive"))
                && page.contains(QStringLiteral("visible: root.inspectorTab === \"layer\""))
                && page.contains(QStringLiteral("root.inspectorTab = \"layer\"")),
-           QStringLiteral("difficulty-card settings live below the layer inspector and layer selection opens it"),
+           QStringLiteral("difficulty-card settings show in the layer inspector only for the card layer, and layer selection opens it"),
            out, &failed);
     expect(session.contains(QStringLiteral("QString::fromUtf8(preset.label)"))
                && !session.contains(QStringLiteral("QString::fromLatin1(preset.label)")),
            QStringLiteral("cover resolution labels decode UTF-8 without mojibake"), out, &failed);
 
+    // Presets are a whole-composition operation like saving or importing a
+    // layout, so applying one (built-in or saved) is a submenu of 布局; only
+    // save / rename / delete, which need a typed name, open a dialog.
     const int canvasTab = page.indexOf(QStringLiteral("qsTrId(\"cover.canvas\")"));
     const int layerTab = page.indexOf(QStringLiteral("qsTrId(\"cover.layer\")"));
-    const int presetTab = page.indexOf(QStringLiteral("qsTrId(\"cover.manage_presets\")"));
-    expect(page.count(QStringLiteral("panelTab: true")) == 3
-               && canvasTab >= 0 && canvasTab < layerTab && layerTab < presetTab
+    const int layoutMenu = page.indexOf(QStringLiteral("id: layoutMenu"));
+    const int presetMenu = page.indexOf(QStringLiteral("id: presetMenu"));
+    const int builtinApply = page.indexOf(QStringLiteral("applyBuiltinPreset("));
+    const int presetMenuItem = page.indexOf(QStringLiteral("qsTrId(\"cover.manage_presets\")"));
+    expect(page.count(QStringLiteral("panelTab: true")) == 2
+               && canvasTab >= 0 && canvasTab < layerTab
+               && layoutMenu >= 0 && presetMenu > layoutMenu
+               && builtinApply > presetMenu && builtinApply < canvasTab
+               && presetMenuItem > presetMenu && presetMenuItem < canvasTab
+               && page.contains(QStringLiteral("presetDialog.open()"))
                && !page.contains(QStringLiteral("text: UiText.text(\"cover.difficulty_card\")")),
-           QStringLiteral("the inspector exposes exactly canvas, layer and preset tabs in order"), out,
+           QStringLiteral("the inspector exposes exactly canvas and layer tabs, and presets apply from a layout submenu"), out,
            &failed);
     expect(session.contains(QStringLiteral("card_chart_frame"))
                && session.contains(QStringLiteral("dual_chart_frames"))
@@ -376,7 +387,7 @@ int main(int argc, char** argv)
     const int inspectorOpen = page.indexOf(QStringLiteral("ColumnLayout {\n                            id: inspector"));
     const int inspectorClose = matchingBrace(page, page.indexOf(QLatin1Char('{'), inspectorOpen));
     const int cardSection = page.indexOf(QStringLiteral("id: cardSettings"));
-    const int presetSection = page.indexOf(QStringLiteral("// ---- 预设 ----"));
+    const int presetSection = page.indexOf(QStringLiteral("id: presetDialog"));
     const int layerRowSelection = page.indexOf(
         QStringLiteral("root.selectLayerFromUi(layerRow.modelData.key)"));
     const int layerRowTabRoute = page.lastIndexOf(
@@ -384,11 +395,11 @@ int main(int argc, char** argv)
     expect(page.count(QStringLiteral("Flickable {")) == 1
                && layerSection >= 0 && inspectorOpen >= 0 && inspectorClose > inspectorOpen
                && cardSection > layerSection && cardSection < inspectorClose
-               && presetSection > cardSection && presetSection < inspectorClose
+               && presetSection > inspectorClose
                && layerRowSelection >= 0 && layerRowTabRoute >= 0
                && layerRowTabRoute < layerRowSelection
                && page.contains(QStringLiteral("contentHeight: inspector.implicitHeight")),
-           QStringLiteral("layer and difficulty settings share one dynamically sized inspector"), out,
+           QStringLiteral("layer and difficulty settings share one dynamically sized inspector, presets live outside it"), out,
            &failed);
 
     const int syncStart = composer.indexOf(QStringLiteral("function syncLiveChartBinding()"));

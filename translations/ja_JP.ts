@@ -275,6 +275,10 @@
         <source>Blur background</source>
         <translation>背景をぼかす</translation>
     </message>
+    <message id="cover.body_font">
+        <source>Body</source>
+        <translation>本文</translation>
+    </message>
     <message id="cover.bold">
         <source>Bold</source>
         <translation>太字</translation>
@@ -397,6 +401,10 @@
         <source>Custom image</source>
         <translation>カスタム画像</translation>
     </message>
+    <message id="cover.delete_layer">
+        <source>Delete layer</source>
+        <translation>レイヤーを削除</translation>
+    </message>
     <message id="cover.delete_preset">
         <source>Delete preset</source>
         <translation>プリセットを削除</translation>
@@ -507,6 +515,10 @@
         <source>Import layout file…</source>
         <translation>レイアウトファイルを読み込む…</translation>
     </message>
+    <message id="cover.inner">
+        <source>Inner</source>
+        <translation>内側</translation>
+    </message>
     <message id="cover.inner_bg">
         <source>Inner bg</source>
         <translation>内側の背景</translation>
@@ -516,8 +528,8 @@
         <translation>ジャケット</translation>
     </message>
     <message id="cover.keep_size_ellipsis">
-        <source>Keep size, ellipsis (…)</source>
-        <translation>文字サイズを保持し省略記号(…)で切り詰め</translation>
+        <source>Ellipsis (…)</source>
+        <translation>省略記号で切る</translation>
     </message>
     <message id="cover.layer">
         <source>Layer</source>
@@ -539,6 +551,10 @@
         <source>Layout ▾</source>
         <translation>レイアウト ▾</translation>
     </message>
+    <message id="cover.level_as_text">
+        <source>Level as text</source>
+        <translation>レベルを文字で</translation>
+    </message>
     <message id="cover.lock">
         <source>Lock</source>
         <translation>ロック</translation>
@@ -554,6 +570,10 @@
     <message id="cover.long_text">
         <source>Long text</source>
         <translation>文字が長すぎます</translation>
+    </message>
+    <message id="cover.long_text_label">
+        <source>Long text</source>
+        <translation>長い文字</translation>
     </message>
     <message id="cover.manage_presets">
         <source>Manage presets...</source>
@@ -591,6 +611,10 @@
         <source>Open recent</source>
         <translation>最近のファイルを開く</translation>
     </message>
+    <message id="cover.output">
+        <source>Output</source>
+        <translation>出力先</translation>
+    </message>
     <message id="cover.play_pause_space">
         <source>Play / pause (Space)</source>
         <translation>再生 / 一時停止（スペース）</translation>
@@ -602,6 +626,10 @@
     <message id="cover.preset_name">
         <source>Preset name:</source>
         <translation>プリセット名：</translation>
+    </message>
+    <message id="cover.presets">
+        <source>Presets</source>
+        <translation>プリセット</translation>
     </message>
     <message id="cover.pure_chart_frame">
         <source>Pure chart frame</source>
@@ -675,6 +703,10 @@
         <source>Send to back</source>
         <translation>最背面へ</translation>
     </message>
+    <message id="cover.shadow">
+        <source>Shadow</source>
+        <translation>影</translation>
+    </message>
     <message id="cover.show">
         <source>Show</source>
         <translation>表示</translation>
@@ -689,7 +721,7 @@
     </message>
     <message id="cover.shrink_to_fit">
         <source>Shrink to fit</source>
-        <translation>縮小して全体を収める</translation>
+        <translation>縮小して収める</translation>
     </message>
     <message id="cover.size">
         <source>Size</source>
@@ -746,6 +778,10 @@
     <message id="cover.this_preset_needs_a_renderable">
         <source>This preset needs a renderable chart frame</source>
         <translation>このプリセットにはレンダリング可能な譜面フレームが必要です</translation>
+    </message>
+    <message id="cover.title_font">
+        <source>Title</source>
+        <translation>タイトル</translation>
     </message>
     <message id="cover.transparency">
         <source>Transparency</source>

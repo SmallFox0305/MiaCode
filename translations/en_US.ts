@@ -275,6 +275,10 @@
         <source>Blur background</source>
         <translation>Blur background</translation>
     </message>
+    <message id="cover.body_font">
+        <source>Body</source>
+        <translation>Body</translation>
+    </message>
     <message id="cover.bold">
         <source>Bold</source>
         <translation>Bold</translation>
@@ -397,6 +401,10 @@
         <source>Custom image</source>
         <translation>Custom image</translation>
     </message>
+    <message id="cover.delete_layer">
+        <source>Delete layer</source>
+        <translation>Delete layer</translation>
+    </message>
     <message id="cover.delete_preset">
         <source>Delete preset</source>
         <translation>Delete preset</translation>
@@ -507,6 +515,10 @@
         <source>Import layout file…</source>
         <translation>Import layout file…</translation>
     </message>
+    <message id="cover.inner">
+        <source>Inner</source>
+        <translation>Inner</translation>
+    </message>
     <message id="cover.inner_bg">
         <source>Inner bg</source>
         <translation>Inner bg</translation>
@@ -516,8 +528,8 @@
         <translation>Jacket</translation>
     </message>
     <message id="cover.keep_size_ellipsis">
-        <source>Keep size, ellipsis (…)</source>
-        <translation>Keep size, ellipsis (…)</translation>
+        <source>Ellipsis (…)</source>
+        <translation>Ellipsis (…)</translation>
     </message>
     <message id="cover.layer">
         <source>Layer</source>
@@ -539,6 +551,10 @@
         <source>Layout ▾</source>
         <translation>Layout ▾</translation>
     </message>
+    <message id="cover.level_as_text">
+        <source>Level as text</source>
+        <translation>Level as text</translation>
+    </message>
     <message id="cover.lock">
         <source>Lock</source>
         <translation>Lock</translation>
@@ -552,6 +568,10 @@
         <translation>Lock position and size (L)</translation>
     </message>
     <message id="cover.long_text">
+        <source>Long text</source>
+        <translation>Long text</translation>
+    </message>
+    <message id="cover.long_text_label">
         <source>Long text</source>
         <translation>Long text</translation>
     </message>
@@ -591,6 +611,10 @@
         <source>Open recent</source>
         <translation>Open recent</translation>
     </message>
+    <message id="cover.output">
+        <source>Output</source>
+        <translation>Output</translation>
+    </message>
     <message id="cover.play_pause_space">
         <source>Play / pause (Space)</source>
         <translation>Play / pause (Space)</translation>
@@ -602,6 +626,10 @@
     <message id="cover.preset_name">
         <source>Preset name:</source>
         <translation>Preset name:</translation>
+    </message>
+    <message id="cover.presets">
+        <source>Presets</source>
+        <translation>Presets</translation>
     </message>
     <message id="cover.pure_chart_frame">
         <source>Pure chart frame</source>
@@ -675,6 +703,10 @@
         <source>Send to back</source>
         <translation>Send to back</translation>
     </message>
+    <message id="cover.shadow">
+        <source>Shadow</source>
+        <translation>Shadow</translation>
+    </message>
     <message id="cover.show">
         <source>Show</source>
         <translation>Show</translation>
@@ -746,6 +778,10 @@
     <message id="cover.this_preset_needs_a_renderable">
         <source>This preset needs a renderable chart frame</source>
         <translation>This preset needs a renderable chart frame</translation>
+    </message>
+    <message id="cover.title_font">
+        <source>Title</source>
+        <translation>Title</translation>
     </message>
     <message id="cover.transparency">
         <source>Transparency</source>

@@ -773,6 +773,14 @@ set(MIACODE_UI_ICON_FILES
     src/app/ui/resources/icons/chevron-down.svg
     src/app/ui/resources/icons/add.svg
     src/app/ui/resources/icons/remove.svg
+    src/app/ui/resources/icons/arrow-up.svg
+    src/app/ui/resources/icons/arrow-down.svg
+    src/app/ui/resources/icons/copy.svg
+    src/app/ui/resources/icons/trash.svg
+    src/app/ui/resources/icons/eye.svg
+    src/app/ui/resources/icons/eye-off.svg
+    src/app/ui/resources/icons/lock.svg
+    src/app/ui/resources/icons/lock-open.svg
     # Canonical MiaCode brand PNG (same asset as resources/app_icons.qrc).
     resources/icons/app.png
 )

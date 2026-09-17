@@ -60,6 +60,11 @@ class CoverExportSession final : public QObject
     Q_PROPERTY(int outputWidth READ outputWidth NOTIFY outputChanged)
     Q_PROPERTY(int outputHeight READ outputHeight NOTIFY outputChanged)
     Q_PROPERTY(QString outputDirectory READ outputDirectory WRITE setOutputDirectory NOTIFY outputChanged)
+    // The folder as the inspector shows it: relative to the chart folder when it
+    // sits inside it (bare "covers", "." for the chart folder itself), otherwise
+    // home-relative, so the field does not open on the
+    // tail of a long absolute path. setOutputDirectory accepts either spelling.
+    Q_PROPERTY(QString outputDirectoryDisplay READ outputDirectoryDisplay NOTIFY outputChanged)
     Q_PROPERTY(bool chartFrameAvailable READ chartFrameAvailable NOTIFY chartFrameAvailabilityChanged)
     Q_PROPERTY(double chartFrameDuration READ chartFrameDuration NOTIFY chartFrameAvailabilityChanged)
     Q_PROPERTY(double chartFrameDiskDiameter READ chartFrameDiskDiameter NOTIFY chartFrameAvailabilityChanged)
@@ -109,6 +114,7 @@ public:
     int outputWidth() const;
     int outputHeight() const;
     QString outputDirectory() const { return outputDirectory_; }
+    QString outputDirectoryDisplay() const;
     bool chartFrameAvailable() const { return chartFrameAvailable_; }
     double chartFrameDuration() const { return chartFrameDuration_; }
     double chartFrameDiskDiameter() const;
