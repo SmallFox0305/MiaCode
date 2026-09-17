@@ -404,5 +404,3 @@ int main(int argc, char** argv)
     out << "preview_slide_erase_by_area_spec ok" << Qt::endl;
     return 0;
 }
-
-
