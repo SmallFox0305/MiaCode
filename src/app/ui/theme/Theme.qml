@@ -28,6 +28,8 @@ QtObject {
         text: {
             // Navigation: selected ≈ 1.0, idle ≈ 0.75 of active.
             active: "#E8E8E8",
+            // Settings-page section captions: halfway between active and secondary.
+            section: "#CBCBCB",
             primary: "#BFBFBF",
             secondary: "#AEAEAE",
             disabled: "#6E6E6E",
@@ -146,6 +148,8 @@ QtObject {
         },
         text: {
             active: "#2F3B4A",
+            // Settings-page section captions: halfway between active and secondary.
+            section: "#465363",
             primary: "#3D4856",
             secondary: "#5D6B7C",
             disabled: "#9AA6B4",
@@ -257,6 +261,8 @@ QtObject {
         },
         text: {
             active: "#203040",
+            // Settings-page section captions: halfway between active and secondary.
+            section: "#404E5D",
             primary: "#203040",
             secondary: "#5F6B7A",
             disabled: "#9AA5B4",
@@ -366,6 +372,8 @@ QtObject {
         },
         text: {
             active: "#E6EEF8",
+            // Settings-page section captions: halfway between active and secondary.
+            section: "#C8D2DF",
             primary: "#E6EEF8",
             secondary: "#A9B6C6",
             disabled: "#7B8798",
@@ -476,7 +484,10 @@ QtObject {
     // 行距, in the pixels of bottom margin each text block carries.
     readonly property int codeBlockSpacing: preferences ? preferences.editorBlockSpacing : 0
     readonly property int uiFontSize: preferences ? preferences.fontSize : 13
-    readonly property int headingFontSize: uiFontSize + 1
+    readonly property int headingFontSize: uiFontSize + 2
+    // Section captions inside a settings page: a step below the page heading
+    // and a step above body text, colored with text.section.
+    readonly property int sectionTitleFontSize: uiFontSize + 1
     readonly property int secondaryFontSize: uiFontSize - 1
     readonly property int captionFontSize: uiFontSize - 3
 

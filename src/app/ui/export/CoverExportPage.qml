@@ -556,9 +556,9 @@ Rectangle {
 
                                 Text {
                                     text: qsTrId("cover.background")
-                                    color: Theme.colors.text.active
+                                    color: Theme.colors.text.section
                                     font.family: Theme.uiFont
-                                    font.pixelSize: Theme.uiFontSize
+                                    font.pixelSize: Theme.sectionTitleFontSize
                                     font.bold: true
                                 }
 
@@ -627,9 +627,9 @@ Rectangle {
 
                                     Text {
                                         text: root.activeLayer ? root.activeLayer.label : ""
-                                        color: Theme.colors.text.active
+                                        color: Theme.colors.text.section
                                         font.family: Theme.uiFont
-                                        font.pixelSize: Theme.uiFontSize
+                                        font.pixelSize: Theme.sectionTitleFontSize
                                         font.bold: true
                                         elide: Text.ElideRight
                                     }
@@ -691,9 +691,9 @@ Rectangle {
                                         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.colors.border.normal }
                                         Text {
                                             text: qsTrId("cover.image_options")
-                                            color: Theme.colors.text.active
+                                            color: Theme.colors.text.section
                                             font.family: Theme.uiFont
-                                            font.pixelSize: Theme.uiFontSize
+                                            font.pixelSize: Theme.sectionTitleFontSize
                                             font.bold: true
                                         }
                                         RowLayout {
@@ -714,9 +714,9 @@ Rectangle {
                                         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.colors.border.normal }
                                         Text {
                                             text: qsTrId("cover.text_options")
-                                            color: Theme.colors.text.active
+                                            color: Theme.colors.text.section
                                             font.family: Theme.uiFont
-                                            font.pixelSize: Theme.uiFontSize
+                                            font.pixelSize: Theme.sectionTitleFontSize
                                             font.bold: true
                                         }
                                         RowLayout {
@@ -781,9 +781,9 @@ Rectangle {
                                         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.colors.border.normal }
                                         Text {
                                             text: qsTrId("cover.chart_frame_options")
-                                            color: Theme.colors.text.active
+                                            color: Theme.colors.text.section
                                             font.family: Theme.uiFont
-                                            font.pixelSize: Theme.uiFontSize
+                                            font.pixelSize: Theme.sectionTitleFontSize
                                             font.bold: true
                                         }
                                         FocusScope {
@@ -957,9 +957,9 @@ Rectangle {
                                 }
                                 Text {
                                     text: qsTrId("cover.difficulty_card_options")
-                                    color: Theme.colors.text.active
+                                    color: Theme.colors.text.section
                                     font.family: Theme.uiFont
-                                    font.pixelSize: Theme.uiFontSize
+                                    font.pixelSize: Theme.sectionTitleFontSize
                                     font.bold: true
                                 }
                                 LabeledCombo {
@@ -998,9 +998,9 @@ Rectangle {
 
                                 Text {
                                     text: qsTrId("cover.font")
-                                    color: Theme.colors.text.active
+                                    color: Theme.colors.text.section
                                     font.family: Theme.uiFont
-                                    font.pixelSize: Theme.uiFontSize
+                                    font.pixelSize: Theme.sectionTitleFontSize
                                     font.bold: true
                                 }
                                 LabeledCombo {

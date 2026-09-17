@@ -311,9 +311,9 @@ AppDialog {
 
             Text {
                 text: qsTrId("dialog.video_export.option.hud_font")
-                color: Theme.colors.text.active
+                color: Theme.colors.text.section
                 font.family: Theme.uiFont
-                font.pixelSize: Theme.uiFontSize
+                font.pixelSize: Theme.sectionTitleFontSize
                 font.bold: true
             }
 

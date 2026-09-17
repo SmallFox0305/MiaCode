@@ -810,6 +810,7 @@ Rectangle {
                         // itself would let it disable its own switch.
                         AppSwitch {
                             text: qsTrId("video_export.add_intro")
+                            sectionTitle: true
                             checked: root.session ? root.session.introEnabled : false
                             enabled: root.session
                                      ? root.session.activeTab === "batch" || root.session.fullRangeExport
