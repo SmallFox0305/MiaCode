@@ -20,26 +20,24 @@ Rectangle {
             root.latency.leave()
     }
 
-    component SectionHeading: RowLayout {
-        id: heading
-        required property string title
+    // The form rows share one label column, the way the export and cover
+    // pages do, so every control's left edge lines up down the page.
+    readonly property int labelWidth: 96
 
+    component FormLabel: Text {
+        Layout.preferredWidth: root.labelWidth
+        color: Theme.colors.text.secondary
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.uiFontSize
+        wrapMode: Text.WordWrap
+    }
+
+    component DetectResult: Text {
         Layout.fillWidth: true
-        spacing: 10
-
-        Text {
-            text: heading.title
-            color: Theme.colors.text.active
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.uiFontSize
-            font.bold: true
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: Theme.colors.border.soft
-        }
+        color: Theme.colors.text.secondary
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.secondaryFontSize
+        elide: Text.ElideRight
     }
 
     PanelHeader {
@@ -65,27 +63,25 @@ Rectangle {
 
         ColumnLayout {
             id: form
-            x: Math.max(16, (pageFlick.width - width) / 2)
+            x: 16
             y: 12
-            width: Math.max(0, Math.min(640, pageFlick.width - 32))
-            spacing: 24
+            width: Math.max(0, Math.min(560, pageFlick.width - 32))
+            spacing: 12
 
-            ColumnLayout {
+            SettingsSection {
                 objectName: "latencyBpmCard"
                 Layout.fillWidth: true
-                spacing: 10
-
-                SectionHeading {
-                    title: qsTrId("qml.bpm")
-                }
+                title: qsTrId("qml.bpm")
+                first: true
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
 
+                    FormLabel { text: qsTrId("qml.bpm") }
                     AppTextField {
                         objectName: "latencyBpmField"
-                        Layout.preferredWidth: 150
+                        Layout.preferredWidth: 140
                         text: root.latency.bpm.toFixed(3)
                         onEditingFinished: {
                             const parsed = parseFloat(text)
@@ -96,34 +92,21 @@ Rectangle {
                     }
                     AppButton {
                         objectName: "latencyDetectBpmButton"
-                        Layout.preferredWidth: 88
                         text: qsTrId("latency.auto_detect")
                         enabled: root.latency.trackAvailable
                         onClicked: root.latency.detectBpm()
                     }
-                    Text {
-                        Layout.fillWidth: true
-                        text: root.latency.bpmDetectResult
-                        color: Theme.colors.text.secondary
-                        font.family: Theme.uiFont
-                        font.pixelSize: Theme.secondaryFontSize
-                        elide: Text.ElideRight
-                    }
+                    DetectResult { text: root.latency.bpmDetectResult }
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 7
+                    spacing: 8
 
-                    Text {
-                        text: qsTrId("qml.count_in_beats")
-                        color: Theme.colors.text.secondary
-                        font.family: Theme.uiFont
-                        font.pixelSize: Theme.secondaryFontSize
-                    }
+                    FormLabel { text: qsTrId("qml.count_in_beats") }
                     AppTextField {
                         objectName: "latencyClockCountField"
-                        Layout.preferredWidth: 64
+                        Layout.preferredWidth: 140
                         text: String(root.latency.clockCount)
                         onEditingFinished: {
                             const parsed = parseInt(text)
@@ -132,42 +115,33 @@ Rectangle {
                             text = String(root.latency.clockCount)
                         }
                     }
-                    Text {
-                        text: qsTrId("qml.decoder")
-                        color: Theme.colors.text.secondary
-                        font.family: Theme.uiFont
-                        font.pixelSize: Theme.secondaryFontSize
-                    }
-                    AppComboBox {
-                        objectName: "latencyDecoderCombo"
-                        Layout.preferredWidth: 138
-                        textRole: "label"
-                        model: root.latency.audioDecoderOptions
-                        currentIndex: root.latency.audioDecoder === "bass" ? 1 : 0
-                        onActivated: function(index) {
-                            root.latency.audioDecoder = root.latency.audioDecoderOptions[index].value
-                        }
-                    }
                     Item { Layout.fillWidth: true }
+                }
+
+                LabeledCombo {
+                    objectName: "latencyDecoderCombo"
+                    label: qsTrId("qml.decoder")
+                    labelWidth: root.labelWidth
+                    spacing: 8
+                    options: root.latency.audioDecoderOptions
+                    currentValue: root.latency.audioDecoder
+                    onPicked: function(value) { root.latency.audioDecoder = value }
                 }
             }
 
-            ColumnLayout {
+            SettingsSection {
                 objectName: "latencyOffsetCard"
                 Layout.fillWidth: true
-                spacing: 10
-
-                SectionHeading {
-                    title: qsTrId("latency.offset")
-                }
+                title: qsTrId("latency.offset")
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
 
+                    FormLabel { text: qsTrId("latency.offset") }
                     AppTextField {
                         objectName: "latencyOffsetField"
-                        Layout.preferredWidth: 150
+                        Layout.preferredWidth: 140
                         text: root.latency.offsetSeconds.toFixed(3)
                         onEditingFinished: {
                             const parsed = parseFloat(text)
@@ -178,55 +152,35 @@ Rectangle {
                     }
                     AppButton {
                         objectName: "latencyDetectOffsetButton"
-                        Layout.preferredWidth: 88
                         text: qsTrId("latency.auto_detect")
                         enabled: root.latency.trackAvailable
                         onClicked: root.latency.detectOffset()
                     }
-                    Text {
-                        Layout.fillWidth: true
-                        text: root.latency.offsetDetectResult
-                        color: Theme.colors.text.secondary
-                        font.family: Theme.uiFont
-                        font.pixelSize: Theme.secondaryFontSize
-                        elide: Text.ElideRight
-                    }
+                    DetectResult { text: root.latency.offsetDetectResult }
                 }
             }
 
-            ColumnLayout {
+            // The playhead readout already sits in the preview panel's transport,
+            // which drives this same audition, so the section does not repeat it.
+            SettingsSection {
                 objectName: "latencyAuditionCard"
                 Layout.fillWidth: true
-                spacing: 10
+                title: qsTrId("dialog.render_settings.music.audition")
 
-                SectionHeading {
-                    title: qsTrId("dialog.render_settings.music.audition")
+                AppButton {
+                    objectName: "latencyAuditionButton"
+                    emphasized: !root.latency.auditionRunning
+                    text: root.latency.auditionRunning ? qsTrId("preview.pause") : qsTrId("qml.start_audition")
+                    onClicked: root.latency.toggleAudition()
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 8
+                    spacing: 4
 
-                    AppButton {
-                        objectName: "latencyAuditionButton"
-                        Layout.preferredWidth: 96
-                        emphasized: !root.latency.auditionRunning
-                        text: root.latency.auditionRunning ? qsTrId("preview.pause") : qsTrId("qml.start_audition")
-                        onClicked: root.latency.toggleAudition()
-                    }
-                    Text {
-                        objectName: "latencyPositionLabel"
-                        text: root.latency.positionText
-                        color: Theme.colors.text.active
-                        font.family: Theme.codeFont.family
-                        font.pixelSize: Theme.uiFontSize + 1
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
+                    FormLabel {
                         text: qsTrId("qml.subdivision")
-                        color: Theme.colors.text.secondary
-                        font.family: Theme.uiFont
-                        font.pixelSize: Theme.secondaryFontSize
+                        Layout.rightMargin: 4
                     }
                     AppTab {
                         panelTab: true
@@ -240,34 +194,19 @@ Rectangle {
                         active: root.latency.subdivision === 8
                         onClicked: root.latency.subdivision = 8
                     }
+                    Item { Layout.fillWidth: true }
                 }
 
-                RowLayout {
-                    Layout.fillWidth: true
+                LabeledSlider {
+                    objectName: "latencySfxVolumeSlider"
+                    label: qsTrId("qml.sound_effect_volume")
+                    labelWidth: root.labelWidth
                     spacing: 8
-
-                    Text {
-                        text: qsTrId("qml.sound_effect_volume")
-                        color: Theme.colors.text.secondary
-                        font.family: Theme.uiFont
-                        font.pixelSize: Theme.secondaryFontSize
-                    }
-                    AppSlider {
-                        objectName: "latencySfxVolumeSlider"
-                        Layout.fillWidth: true
-                        from: 0
-                        to: 100
-                        stepSize: 1
-                        value: root.latency.sfxVolumePercent
-                        onMoved: root.latency.sfxVolumePercent = Math.round(value)
-                    }
-                    Text {
-                        Layout.preferredWidth: 36
-                        horizontalAlignment: Text.AlignRight
-                        text: root.latency.sfxVolumePercent + "%"
-                        color: Theme.colors.text.active
-                        font.family: Theme.codeFont.family
-                    }
+                    from: 0
+                    to: 100
+                    stepSize: 1
+                    value: root.latency.sfxVolumePercent
+                    onMoved: function(value) { root.latency.sfxVolumePercent = Math.round(value) }
                 }
             }
         }
