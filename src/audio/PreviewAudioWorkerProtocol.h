@@ -163,6 +163,7 @@ struct PreviewAudioSnapshot {
     int nativeErrorCode = 0;
     quint64 workerThreadId = 0;
     PreviewAudioHealthSample healthSample;
+    PlaybackClockSample playbackClock;
 };
 
 struct CommandPolicy {

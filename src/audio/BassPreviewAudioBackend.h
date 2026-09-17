@@ -84,6 +84,7 @@ public:
     void stopAll() override;
     void prepareForShutdown() override;
     miacode::preview_audio::PreviewAudioHealthSample sampleHealth() override;
+    miacode::preview_audio::PlaybackClockSample playbackClockSample() const override;
 
 private:
     struct Sample;

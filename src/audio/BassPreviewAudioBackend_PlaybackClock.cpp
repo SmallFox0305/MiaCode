@@ -336,9 +336,10 @@ void BassPreviewAudioBackend::logPlaybackStatus(double authoritativeSecond, doub
     bool masterRunning = false;
     int armedGroupIndex = -1;
     QString armedActionLabel;
-    // The latest sample was produced by PreviewAudioWorker before this status row. Nothing
-    // here calls BASS under schedulerMutex_.
-    const miacode::preview_audio::PreviewAudioHealthSample healthSample = latestHealthSample_;
+    // Refresh outside schedulerMutex_: comparing today's chart time with a one-second
+    // old BGM cursor invents up to a second of drift. This runs on the native worker.
+    const miacode::preview_audio::PreviewAudioHealthSample healthSample = sampleHealth();
+    const auto clockSample = playbackClockSample();
     {
         QMutexLocker schedulerLocker(&schedulerMutex_);
         mixerSecond = (authoritativeSecond - playbackSession_.sessionStartSecond)
@@ -381,7 +382,7 @@ void BassPreviewAudioBackend::logPlaybackStatus(double authoritativeSecond, doub
     }
     const double driftMs = (authoritativeSecond - fallbackSecond) * 1000.0;
     appendAudioDebugLog(
-        QString("bass_status txn=%1 auth=%2 mixer=%3 bgm_raw=%4 bgm_chart=%5 fallback=%6 drift_ms=%7 next_group_idx=%8 next_group_second=%9 last_trigger_idx=%10 last_trigger_second=%11 triggered_count=%12 rate=%13 speed_mode=%14 bgm_delta_ms=%15 bgm_raw_expected=%16 bgm_raw_delta_ms=%17 bgm_offset=%18 bgm_len=%19 bgm_running=%20 bgm_pending=%21 master_running=%22 retained_mode=%23 status_interval_ms=%24 armed_group_idx=%25 armed_action=%26")
+        QString("bass_status txn=%1 auth=%2 mixer=%3 bgm_raw=%4 bgm_chart=%5 fallback=%6 drift_ms=%7 next_group_idx=%8 next_group_second=%9 last_trigger_idx=%10 last_trigger_second=%11 triggered_count=%12 rate=%13 speed_mode=%14 bgm_delta_ms=%15 bgm_raw_expected=%16 bgm_raw_delta_ms=%17 bgm_offset=%18 bgm_len=%19 bgm_running=%20 bgm_pending=%21 master_running=%22 retained_mode=%23 status_interval_ms=%24 armed_group_idx=%25 armed_action=%26 clock_valid=%27 clock_second=%28")
             .arg(playbackTransactionId_)
             .arg(authoritativeSecond, 0, 'f', 6)
             .arg(mixerSecond, 0, 'f', 6)
@@ -407,7 +408,9 @@ void BassPreviewAudioBackend::logPlaybackStatus(double authoritativeSecond, doub
             .arg(retainedPlaybackModeLabel(retainedPlaybackMode_))
             .arg(statusLogIntervalSeconds * 1000.0, 0, 'f', 3)
             .arg(armedGroupIndex)
-            .arg(armedActionLabel));
+            .arg(armedActionLabel)
+            .arg(clockSample.valid ? 1 : 0)
+            .arg(clockSample.second, 0, 'f', 6));
 #else
     Q_UNUSED(authoritativeSecond);
     Q_UNUSED(fallbackSecond);

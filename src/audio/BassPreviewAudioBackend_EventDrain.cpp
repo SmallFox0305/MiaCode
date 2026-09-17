@@ -661,3 +661,36 @@ void BassPreviewAudioBackend::prepareForShutdown()
     miacode::preview_audio::PreviewBassEmergencyPause::disarm();
     stopAll();
 }
+
+miacode::preview_audio::PlaybackClockSample BassPreviewAudioBackend::playbackClockSample() const
+{
+    miacode::preview_audio::PlaybackClockSample sample;
+#ifdef MIACODE_HAS_BASS_AUDIO
+    miacode::preview_audio::bass::SfxSchedulerAnchor anchor;
+    {
+        QMutexLocker locker(&schedulerMutex_);
+        if (!sfxSchedulerActive_ || !playbackSession_.masterRunning || masterMixer_ == 0) {
+            return sample;
+        }
+        anchor = sfxSchedulerAnchor_;
+    }
+    // Playback position, not decode/source position: it includes output-buffer progress
+    // and remains meaningful before BGM start and after BGM EOF. Never query BASS while
+    // holding the mutex also used by its mixtime callback.
+    const qint64 before = miacode::preview_audio::playbackClockNowNs();
+    const QWORD position = BASS_ChannelGetPosition(masterMixer_, BASS_POS_BYTE);
+    const qint64 after = miacode::preview_audio::playbackClockNowNs();
+    if (position == static_cast<QWORD>(-1) || after - before > miacode::preview_audio::kPlaybackClockMaxQueryNs) {
+        return sample;
+    }
+    const double mixerSecond = BASS_ChannelBytes2Seconds(masterMixer_, position);
+    if (!qIsFinite(mixerSecond) || mixerSecond < 0.0) {
+        return sample;
+    }
+    sample.valid = true;
+    sample.second = miacode::preview_audio::bass::chartSecondForMixerSecond(anchor, mixerSecond);
+    sample.rate = anchor.playbackRate;
+    sample.sampledAtNs = before + (after - before) / 2;
+#endif
+    return sample;
+}

@@ -196,6 +196,13 @@ void MainWindow::TimelineSection::onQtPreviewTick()
         }
         return;
     }
+    // Live BASS playback owns SFX and pending-BGM timing through the master
+    // mixer. The tick remains responsible for visual advancement, health
+    // observation, and the non-BASS fallback backend.
+    if (state_.previewSfxRuntime_ != nullptr) {
+        state_.previewSfxRuntime_->syncBackgroundTrack(fallbackSecond);
+    }
+    const double second = owner_.currentPreviewAuthoritativeAudioClockSecond();
     // extensionManager_ is created unconditionally at bootstrap, so without the
     // subscriber pre-check this built two nested QJsonObjects on every playback
     // tick (60-180 Hz) for an event that, with no extension subscribed, nothing
@@ -205,17 +212,10 @@ void MainWindow::TimelineSection::onQtPreviewTick()
         && owner_.extensionManager_->hasEventSubscribers(kPreviewPositionChangedEvent)) {
         owner_.extensionManager_->publishEvent(kPreviewPositionChangedEvent, QJsonObject{
             {QStringLiteral("source"), QStringLiteral("preview")},
-            {QStringLiteral("data"), QJsonObject{{QStringLiteral("second"), fallbackSecond}}},
+            {QStringLiteral("data"), QJsonObject{{QStringLiteral("second"), second}}},
         }, true);
     }
-    // Live BASS playback owns SFX and pending-BGM timing through the master
-    // mixer. The tick remains responsible for visual advancement, health
-    // observation, and the non-BASS fallback backend.
-    if (state_.previewSfxRuntime_ != nullptr) {
-        state_.previewSfxRuntime_->syncBackgroundTrack(fallbackSecond);
-    }
-    const double second = fallbackSecond;
-    const bool hasAudioClock = false;
+    const bool hasAudioClock = state_.previewSfxRuntime_ != nullptr;
     onQtPreviewTickAtSecond(second, fallbackSecond, hasAudioClock);
 }
 
@@ -224,13 +224,8 @@ double MainWindow::TimelineSection::applyVisualClockSmoothing(
 {
     Q_UNUSED(fallbackSecond);
     Q_UNUSED(hasAudioClock);
-    // G1 Commit 4: smoothing collapsed to pass-through.
-    //
-    // The pre-G1 implementation existed to absorb jitter in the BASS-master-mixer cursor
-    // (~50-100ms stalls from DXGI back-pressure, tempo-stream stalls, buffer underrun).
-    // With wall-clock now the master timeline (`qtPreviewElapsed_`), the input here is
-    // monotonic and rate-correct by construction — there is nothing to smooth.
-    //
+    // Device-clock quantization and backwards corrections are handled by the
+    // facade's monotonic interpolator before all visual consumers sample it.
     // What's preserved: the lookahead-vsync shift. That compensates for GPU pipeline
     // latency (GUI → render → composite → present takes 1-2 vsyncs after the tick that
     // samples chart-second) and is independent of the audio backend, so it survives the

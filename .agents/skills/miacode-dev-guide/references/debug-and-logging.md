@@ -66,6 +66,11 @@ only these repeat families:
   settings, surface handle/size, or any workspace sync taking `>=50 ms` still emits.
 
 ### Log file locations
+
+- BASS health logging uses monotonic seconds for its throttle and stall duration (the
+  `second` field in health/stall rows is therefore not chart time). Inactive samples
+  reset the throttle. `bass_status` refreshes BGM health on the worker before comparing
+  positions instead of comparing a one-second-old cursor with the current chart time.
 - Shared dir env: `MIACODE_LOG_DIR`. Default: project-local `.miacode/logs/` once a chart is
   bound, else app-local `logs/` next to the executable.
 - Per-channel path overrides: `MIACODE_RUNTIME_LOG_PATH`, `MIACODE_AUDIO_LOG_PATH`,

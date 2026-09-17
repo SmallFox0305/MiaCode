@@ -1,3 +1,4 @@
+#include "audio/PreviewAudioClock.h"
 #include <QString>
 #include <QTextStream>
 
@@ -58,6 +59,29 @@ int main()
     ok &= require(
         chartSecondForMixerSecond(rebuildAnchor, 150.0) == 55.0,
         QStringLiteral("a settings rebuild reanchors at the current master position, not the last SFX"), err);
+
+    using namespace miacode::preview_audio;
+    PlaybackClockFollower follower;
+    PlaybackClockSample clock{true, 10.0, 1.0, 1000000000};
+    ok &= require(std::abs(follower.follow(clock, 1, 1050000000) - 10.05) < 1e-9,
+                  QStringLiteral("worker timestamps interpolate between audio observations"), err);
+    clock = {true, 10.035, 1.0, 1050000000}; // 15 ms lost to an output underrun
+    ok &= require(std::abs(follower.follow(clock, 1, 1050000000) - 10.05) < 1e-9,
+                  QStringLiteral("underrun correction holds instead of rewinding visuals"), err);
+    ok &= require(std::abs(follower.follow(clock, 1, 1080000000) - 10.065) < 1e-9,
+                  QStringLiteral("visuals resume on audio time without retaining the lost 15 ms"), err);
+    ok &= require(std::abs(follower.follow(clock, 1, 2050000000) - 10.135) < 1e-9,
+                  QStringLiteral("missing worker updates cannot extrapolate indefinitely"), err);
+    clock = {true, 2.0, 1.0, 3000000000};
+    ok &= require(follower.follow(clock, 2, 3000000000) == 2.0,
+                  QStringLiteral("a backwards seek starts a new clock segment"), err);
+    clock = {true, 1.0, 0.5, 4000000000};
+    ok &= require(std::abs(follower.follow(clock, 2, 4050000000) - 1.025) < 1e-9,
+                  QStringLiteral("a rate change resets interpolation and scales elapsed time"), err);
+    follower.reset();
+    clock = {true, -1.0, 1.0, 5000000000};
+    ok &= require(follower.follow(clock, 2, 5000000000) == -1.0,
+                  QStringLiteral("negative pre-roll remains valid after a transport reset"), err);
 
     if (ok) {
         out << "BASS preview SFX scheduler policy spec passed." << Qt::endl;

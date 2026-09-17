@@ -62,6 +62,7 @@ struct PreviewAudioWorker::BackendSnapshot {
     double preparedSecond = 0.0;
     double authoritativeSecond = 0.0;
     double backgroundSecond = 0.0;
+    PlaybackClockSample playbackClock;
     RetainedPlaybackMode retainedMode = RetainedPlaybackMode::None;
     RetainedBgmState retainedBgmState = RetainedBgmState::NoneLoaded;
 };
@@ -829,6 +830,7 @@ PreviewAudioWorker::BackendSnapshot PreviewAudioWorker::captureBackendSnapshot(
     state.preparedSecond = backend.preparedStartSecond();
     state.authoritativeSecond = backend.authoritativePlaybackSecond();
     state.backgroundSecond = backend.backgroundPlaybackSecond();
+    state.playbackClock = backend.playbackClockSample();
     state.retainedMode = backend.retainedPlaybackMode();
     state.retainedBgmState = backend.retainedBgmState();
     return state;
@@ -859,31 +861,36 @@ void PreviewAudioWorker::sampleHealth(PreviewAudioBackend& backend, RuntimeState
         return;
     }
 
+    if (sample.sampledAtMs <= 0) {
+        state.healthStallTracker = {};
+        state.lastHealthLogSecond = -1.0;
+        return;
+    }
     const bool underrun = health::isUnderrun(sample.mixerActivity)
         || health::isUnderrun(sample.backgroundActivity);
-    const double authoritativeSecond = publishedSnapshot.authoritativeSecond;
+    const double healthNowSecond = static_cast<double>(playbackClockNowNs()) / 1.0e9;
     const health::StallEdge edge = health::updateStall(
         &state.healthStallTracker,
         underrun,
-        authoritativeSecond);
+        healthNowSecond);
     if (edge != health::StallEdge::None) {
         appendAudioDebugLog(health::stallEdgePayload(
             edge,
             publishedSnapshot.identity.transactionId,
-            authoritativeSecond,
+            healthNowSecond,
             sample.mixerActivity,
             sample.backgroundActivity,
             state.healthStallTracker));
     }
-    if (!health::shouldLogHealth(authoritativeSecond, state.lastHealthLogSecond)) {
+    if (!health::shouldLogHealth(healthNowSecond, state.lastHealthLogSecond)) {
         return;
     }
-    state.lastHealthLogSecond = authoritativeSecond;
+    state.lastHealthLogSecond = healthNowSecond;
     const miacode::mmcss::LastRegistrationStatus mmcss =
         miacode::mmcss::lastRegistrationStatus();
     appendAudioDebugLog(health::healthPayload(
         publishedSnapshot.identity.transactionId,
-        authoritativeSecond,
+        healthNowSecond,
         sample.mixerActivity,
         sample.backgroundActivity,
         state.healthStallTracker,
@@ -986,6 +993,7 @@ void PreviewAudioWorker::publishBackendLifecycle(
         snapshot_.preparedSecond = backendState.preparedSecond;
         snapshot_.authoritativeSecond = backendState.authoritativeSecond;
         snapshot_.backgroundPlaybackSecond = backendState.backgroundSecond;
+        snapshot_.playbackClock = backendState.playbackClock;
         snapshot_.retainedPlaybackMode = backendState.retainedMode;
         snapshot_.retainedBgmState = backendState.retainedBgmState;
         snapshot_.backendId = backendState.backendId;
@@ -1048,6 +1056,7 @@ bool PreviewAudioWorker::publishCompletion(
             snapshot_.preparedSecond = backendState->preparedSecond;
             snapshot_.authoritativeSecond = backendState->authoritativeSecond;
             snapshot_.backgroundPlaybackSecond = backendState->backgroundSecond;
+            snapshot_.playbackClock = backendState->playbackClock;
             snapshot_.retainedPlaybackMode = backendState->retainedMode;
             snapshot_.retainedBgmState = backendState->retainedBgmState;
         }

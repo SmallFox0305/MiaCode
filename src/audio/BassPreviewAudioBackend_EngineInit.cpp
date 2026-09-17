@@ -443,7 +443,9 @@ bool BassPreviewAudioBackend::initializeAudioEngine()
     }
     BASS_ChannelSetAttribute(masterMixer_, BASS_ATTRIB_BUFFER, 0.0f);
     noteBassErr("engine_init/master_buffer_attr");
-    BASS_ChannelSetAttribute(masterMixer_, BASS_ATTRIB_MIXER_THREADS, 8.0f);
+    // Short, unbuffered device callbacks must not fan out to eight worker threads
+    // and wait for them on every 10 ms CoreAudio cycle. Mix locally.
+    BASS_ChannelSetAttribute(masterMixer_, BASS_ATTRIB_MIXER_THREADS, 1.0f);
     noteBassErr("engine_init/master_mixer_threads_attr");
     // G1 Commit 6: master mixer stays ACTIVE_PLAYING for the lifetime of the engine.
     // Pre-G1 we cycled it via BASS_ChannelPause / BASS_ChannelPlay / BASS_ChannelStop

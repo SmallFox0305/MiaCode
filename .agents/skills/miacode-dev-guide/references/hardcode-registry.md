@@ -1,5 +1,9 @@
 # Hardcode Registry
 
+- `src/audio/PreviewAudioClock.h`: live device-clock extrapolation is capped at 100 ms;
+  native position observations taking more than 10 ms are discarded. These are realtime
+  preview bounds, not export timing or persisted user offsets.
+
 Where important constants live, what they mean, and whether they should stay local or move into a
 shared config header. Ported with paths corrected (2026-05-29); verify against code.
 

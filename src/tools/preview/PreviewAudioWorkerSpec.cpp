@@ -353,6 +353,11 @@ public:
         call(QStringLiteral("authoritativeSecond"));
         return 6.0;
     }
+    PlaybackClockSample playbackClockSample() const override
+    {
+        call(QStringLiteral("playbackClockSample"));
+        return {true, 9.0, 0.5, playbackClockNowNs()};
+    }
     double syncPreviewPlaybackClockTransaction(double second) override
     {
         call(QStringLiteral("syncClock"));
@@ -829,6 +834,9 @@ bool verifyWorkerSamplesHealthOnItsBackendThread(QTextStream& err)
     ok &= expect(snapshot.healthSample.sequence != 0
                      && snapshot.healthSample.sampledAtMs == 1234,
                  "worker publishes the latest health payload in its snapshot", err);
+    ok &= expect(snapshot.playbackClock.valid && snapshot.playbackClock.second == 9.0
+                     && snapshot.playbackClock.rate == 0.5 && snapshot.playbackClock.sampledAtNs > 0,
+                 "native clock position rate and monotonic timestamp cross the worker boundary", err);
     const std::vector<CallRecord> calls = [&] {
         std::lock_guard lock(state->mutex);
         return state->calls;
