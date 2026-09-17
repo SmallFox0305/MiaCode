@@ -196,6 +196,13 @@ void MainWindow::TimelineSection::onQtPreviewTick()
         }
         return;
     }
+    // Live BASS playback owns SFX and pending-BGM timing through the master
+    // mixer. The tick remains responsible for visual advancement, health
+    // observation, and the non-BASS fallback backend.
+    if (state_.previewSfxRuntime_ != nullptr) {
+        state_.previewSfxRuntime_->syncBackgroundTrack(fallbackSecond);
+    }
+    const double second = owner_.currentPreviewAuthoritativeAudioClockSecond();
     // extensionManager_ is created unconditionally at bootstrap, so without the
     // subscriber pre-check this built two nested QJsonObjects on every playback
     // tick (60-180 Hz) for an event that, with no extension subscribed, nothing
@@ -205,16 +212,9 @@ void MainWindow::TimelineSection::onQtPreviewTick()
         && owner_.extensionManager_->hasEventSubscribers(kPreviewPositionChangedEvent)) {
         owner_.extensionManager_->publishEvent(kPreviewPositionChangedEvent, QJsonObject{
             {QStringLiteral("source"), QStringLiteral("preview")},
-            {QStringLiteral("data"), QJsonObject{{QStringLiteral("second"), fallbackSecond}}},
+            {QStringLiteral("data"), QJsonObject{{QStringLiteral("second"), second}}},
         }, true);
     }
-    // Live BASS playback owns SFX and pending-BGM timing through the master
-    // mixer. The tick remains responsible for visual advancement, health
-    // observation, and the non-BASS fallback backend.
-    if (state_.previewSfxRuntime_ != nullptr) {
-        state_.previewSfxRuntime_->syncBackgroundTrack(fallbackSecond);
-    }
-    const double second = owner_.currentPreviewAuthoritativeAudioClockSecond();
     const bool hasAudioClock = state_.previewSfxRuntime_ != nullptr;
     onQtPreviewTickAtSecond(second, fallbackSecond, hasAudioClock);
 }
