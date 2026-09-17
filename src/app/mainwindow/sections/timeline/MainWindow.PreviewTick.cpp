@@ -214,8 +214,8 @@ void MainWindow::TimelineSection::onQtPreviewTick()
     if (state_.previewSfxRuntime_ != nullptr) {
         state_.previewSfxRuntime_->syncBackgroundTrack(fallbackSecond);
     }
-    const double second = fallbackSecond;
-    const bool hasAudioClock = false;
+    const double second = owner_.currentPreviewAuthoritativeAudioClockSecond();
+    const bool hasAudioClock = state_.previewSfxRuntime_ != nullptr;
     onQtPreviewTickAtSecond(second, fallbackSecond, hasAudioClock);
 }
 
@@ -224,13 +224,8 @@ double MainWindow::TimelineSection::applyVisualClockSmoothing(
 {
     Q_UNUSED(fallbackSecond);
     Q_UNUSED(hasAudioClock);
-    // G1 Commit 4: smoothing collapsed to pass-through.
-    //
-    // The pre-G1 implementation existed to absorb jitter in the BASS-master-mixer cursor
-    // (~50-100ms stalls from DXGI back-pressure, tempo-stream stalls, buffer underrun).
-    // With wall-clock now the master timeline (`qtPreviewElapsed_`), the input here is
-    // monotonic and rate-correct by construction — there is nothing to smooth.
-    //
+    // Device-clock quantization and backwards corrections are handled by the
+    // facade's monotonic interpolator before all visual consumers sample it.
     // What's preserved: the lookahead-vsync shift. That compensates for GPU pipeline
     // latency (GUI → render → composite → present takes 1-2 vsyncs after the tick that
     // samples chart-second) and is independent of the audio backend, so it survives the

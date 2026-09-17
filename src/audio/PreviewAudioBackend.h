@@ -7,6 +7,7 @@
 #include "common/PreviewTimingSettings.h"
 #include "PreviewAudioSettings.h"
 #include "PreviewAudioHealth.h"
+#include "PreviewAudioClock.h"
 
 namespace miacode::preview_audio {
 
@@ -126,6 +127,7 @@ public:
         stopAll();
     }
     virtual PreviewAudioHealthSample sampleHealth() { return {}; }
+    virtual PlaybackClockSample playbackClockSample() const { return {}; }
 };
 
 }  // namespace miacode::preview_audio

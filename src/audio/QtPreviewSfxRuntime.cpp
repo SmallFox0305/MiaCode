@@ -488,6 +488,22 @@ double QtPreviewSfxRuntime::authoritativePlaybackSecond() const
     return lastSnapshot().authoritativeSecond;
 }
 
+double QtPreviewSfxRuntime::playbackClockSecond(double fallbackSecond, double rate) const
+{
+    const PreviewAudioSnapshot snapshot = lastSnapshot();
+    const auto& clock = snapshot.playbackClock;
+    if (!snapshot.backendReady || !clock.valid
+        || snapshot.identity.generation != playbackGeneration()
+        || snapshot.identity.assetGeneration != assetGeneration()
+        || snapshot.identity.transactionId != transactionId_.load(std::memory_order_acquire)
+        || deviceCutoffActive_.load(std::memory_order_acquire)
+        || qAbs(clock.rate - rate) > 0.000001) {
+        playbackClockFollower_.reset();
+        return fallbackSecond;
+    }
+    return playbackClockFollower_.follow(clock, snapshot.identity.generation, playbackClockNowNs());
+}
+
 void QtPreviewSfxRuntime::stopSfxVoices()
 {
     post(makeCommand(CommandKind::StopSfxVoices));

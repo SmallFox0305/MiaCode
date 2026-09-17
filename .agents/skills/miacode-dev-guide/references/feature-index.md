@@ -448,6 +448,10 @@ Map a user-facing feature to the files / classes / functions that own it. Paths 
 
 ## 7. Preview audio & SFX scheduling — `src/audio/`
 
+- Live clock: `PreviewAudioClock.h`, `BassPreviewAudioBackend::playbackClockSample`,
+  worker snapshots and `QtPreviewSfxRuntime::playbackClockSecond` keep the GUI on actual
+  mixer playback progress after output underruns, without native calls on the GUI thread.
+
 - Facade: `QtPreviewSfxRuntime.{h,cpp}` — GUI-owned command/subscription surface. It posts value
   commands to `PreviewAudioWorker`, reads published snapshots for synchronous fallbacks, and delivers
   worker completions through queued Qt signals; it never owns a native backend.

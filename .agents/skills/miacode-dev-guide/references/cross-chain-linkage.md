@@ -19,6 +19,16 @@ current but **code is source of truth** — verify and fix drift in the same cha
 
 ## 1. Edit → parse → timeline → preview chain
 
+- Live BASS visuals use the worker's timestamped master-mixer playback position through
+  `PreviewAudioClock.h` / `QtPreviewSfxRuntime::playbackClockSecond`. The GUI extrapolates
+  at the sampled rate for at most 100 ms and holds backwards corrections until audio
+  catches up. Generation/asset/transaction/rate checks reject old observations across
+  transport changes. Both the preview tick and timeline/editor-follow must consume
+  `currentPreviewAuthoritativeAudioClockSecond`; the wall timer is a compatibility and
+  startup fallback, not the live BASS authority. The mixer clock survives BGM pre-roll
+  and EOF; do not substitute the tempo source cursor. Offline export is frame-driven
+  and does not consume this live device clock.
+
 1. editor `contentsChange` / `scheduleTimelineRefresh`
 2. `MainWindow::applyTimelineQuickChange` / `refreshTimelineQuickModelFromCurrentText`
 3. `TimelineQuickModel::applyContentsChange` / `rebuildFromText`
