@@ -1046,6 +1046,16 @@ if (WIN32)
             $<TARGET_FILE_DIR:MiaCode>
         WORKING_DIRECTORY "${MIACODE_BASS_WINDOWS_BIN_DIR}"
     )
+    # Bundle the assets directory so the application is self-contained and
+    # can run from any location without relying on the source tree.
+    add_custom_command(TARGET MiaCode POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_FILE_DIR:MiaCode>/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+            "$<TARGET_FILE_DIR:MiaCode>/assets"
+        COMMENT "Bundling assets directory into output"
+        VERBATIM
+    )
 elseif (APPLE)
     set(MIACODE_BASS_MACOS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bass/lib/macos/universal")
     set(MIACODE_BASS_MACOS_LIBRARIES
@@ -1075,6 +1085,16 @@ elseif (APPLE)
             ${MIACODE_BASS_MACOS_LIBRARIES}
             "$<TARGET_FILE_DIR:MiaCode>/../Frameworks"
         COMMENT "Deploying macOS BASS runtime libraries"
+    )
+    # Bundle the assets directory into the macOS bundle Resources/ so the
+    # application is self-contained and can run from any location.
+    add_custom_command(TARGET MiaCode POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_FILE_DIR:MiaCode>/../Resources/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+            "$<TARGET_FILE_DIR:MiaCode>/../Resources/assets"
+        COMMENT "Bundling assets directory into macOS bundle"
+        VERBATIM
     )
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
@@ -1111,6 +1131,16 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             ${MIACODE_BASS_LINUX_LIBRARIES}
             $<TARGET_FILE_DIR:MiaCode>
         COMMENT "Deploying Linux BASS runtime libraries"
+    )
+    # Bundle the assets directory so the application is self-contained and
+    # can run from any location without relying on the source tree.
+    add_custom_command(TARGET MiaCode POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_FILE_DIR:MiaCode>/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+            "$<TARGET_FILE_DIR:MiaCode>/assets"
+        COMMENT "Bundling assets directory into output"
+        VERBATIM
     )
 endif()
 
