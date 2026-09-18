@@ -149,6 +149,12 @@ Linux 用户可按下方步骤从源码构建。
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build\build-win.ps1 -Toolchain msvc -BuildJobs 4
 ```
+### ArchLinux
+
+-git版本已由@Small_Fox0305开发者发布并维护至AUR 执行以下命令即可安装
+```bash
+yay -S mia-code-git
+```
 
 ARM64 主机使用 `-Toolchain msvc-arm64`，并选择独立构建目录；参数见 [scripts/README.md](scripts/README.md)。
 
