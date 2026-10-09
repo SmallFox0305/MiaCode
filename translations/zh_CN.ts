@@ -661,6 +661,18 @@
         <source>Layer</source>
         <translation>图层</translation>
     </message>
+    <message id="cover.bring_to_front">
+        <source>Bring to Front</source>
+        <translation>置于顶层</translation>
+    </message>
+    <message id="cover.send_to_back">
+        <source>Send to Back</source>
+        <translation>置于底层</translation>
+    </message>
+    <message id="cover.layer_hidden">
+        <source>Hidden</source>
+        <translation>隐藏</translation>
+    </message>
     <message id="cover.layers">
         <source>Layers</source>
         <translation>图层</translation>
@@ -844,6 +856,10 @@
     <message id="cover.unlock">
         <source>Unlock</source>
         <translation>解锁</translation>
+    </message>
+    <message id="cover.window.title">
+        <source>Cover Editor</source>
+        <translation>封面编辑器</translation>
     </message>
     <message id="cover.window_creation_failed">
         <source>Failed to create the cover export window.</source>

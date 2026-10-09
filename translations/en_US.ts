@@ -661,6 +661,18 @@
         <source>Layer</source>
         <translation>Layer</translation>
     </message>
+    <message id="cover.bring_to_front">
+        <source>Bring to Front</source>
+        <translation>Bring to Front</translation>
+    </message>
+    <message id="cover.send_to_back">
+        <source>Send to Back</source>
+        <translation>Send to Back</translation>
+    </message>
+    <message id="cover.layer_hidden">
+        <source>Hidden</source>
+        <translation>Hidden</translation>
+    </message>
     <message id="cover.layers">
         <source>Layers</source>
         <translation>Layers</translation>
@@ -844,6 +856,10 @@
     <message id="cover.unlock">
         <source>Unlock</source>
         <translation>Unlock</translation>
+    </message>
+    <message id="cover.window.title">
+        <source>Cover Editor</source>
+        <translation>Cover Editor</translation>
     </message>
     <message id="cover.window_creation_failed">
         <source>Failed to create the cover export window.</source>

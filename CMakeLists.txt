@@ -558,6 +558,7 @@ set(MIACODE_UI_QML_FILES
     src/app/ui/components/AppTabBar.qml
     src/app/ui/components/AppTabPages.qml
     src/app/ui/components/AppChoiceButton.qml
+    src/app/ui/components/DifficultySelector.qml
     src/app/ui/components/DifficultySwatch.qml
     src/app/ui/components/PanelHeader.qml
     src/app/ui/components/SplitHandle.qml
@@ -616,6 +617,7 @@ set(MIACODE_UI_QML_FILES
     src/app/ui/export/ExportRangeSelector.qml
     src/app/ui/export/ExportVideoPage.qml
     src/app/ui/export/CoverExportPage.qml
+    src/app/ui/export/CoverLayerList.qml
     src/app/ui/export/CoverExportWindow.qml
     src/app/ui/editor/EditorPane.qml
     src/app/ui/editor/EditorTabBar.qml

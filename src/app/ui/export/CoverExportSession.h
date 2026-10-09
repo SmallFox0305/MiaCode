@@ -142,10 +142,13 @@ public:
     Q_INVOKABLE void sendActiveLayerToBack();
     Q_INVOKABLE void raiseActiveLayer();
     Q_INVOKABLE void lowerActiveLayer();
+    Q_INVOKABLE void moveLayer(const QString& key, int viewRow);
     Q_INVOKABLE void browseActiveLayerImage();
     Q_INVOKABLE void importActiveLayerFont();
     Q_INVOKABLE void setActiveLayerVisible(bool visible);
     Q_INVOKABLE void setActiveLayerLocked(bool locked);
+    Q_INVOKABLE void setLayerVisible(const QString& key, bool visible);
+    Q_INVOKABLE void setLayerLocked(const QString& key, bool locked);
     Q_INVOKABLE void setActiveLayerOpacity(double opacity);
     Q_INVOKABLE void setActiveLayerSizeFraction(double sizeFraction);
     Q_INVOKABLE void setActiveLayerCenter(double nx, double ny);

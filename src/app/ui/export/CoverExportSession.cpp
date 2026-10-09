@@ -1,6 +1,7 @@
 #include "common/LocalizedText.h"
 
 #include "app/ui/export/CoverExportSession.h"
+#include "app/ui/document/DifficultyOptions.h"
 #include "app/ui/preferences/LocaleService.h"
 
 #include "core/chart/ChartAssetPaths.h"
@@ -28,6 +29,7 @@
 #include <QUrl>
 
 #include <iterator>
+#include <algorithm>
 
 
 namespace miacode::ui {
@@ -274,13 +276,7 @@ int CoverExportSession::defaultDifficultyId(int preferredDifficultyId) const
 
 void CoverExportSession::rebuildDifficultyList()
 {
-    QVariantList next;
-    for (int id : exportEngine_.difficultyIds()) {
-        next.append(QVariantMap{
-            {QStringLiteral("id"), id},
-            {QStringLiteral("name"), SimaiDocument::difficultyShortName(id)},
-        });
-    }
+    const QVariantList next = difficultyOptions(exportEngine_.difficultyIds());
     if (difficulties_ != next) {
         difficulties_ = next;
         emit difficultiesChanged();
@@ -638,6 +634,22 @@ void CoverExportSession::lowerActiveLayer()
     persistComposition();
 }
 
+void CoverExportSession::moveLayer(const QString& key, int viewRow)
+{
+    if (layout_ == nullptr || busy_) return;
+    auto ordered = layout_->layers();
+    std::sort(ordered.begin(), ordered.end(), [](const auto* a, const auto* b) {
+        return a->z() > b->z();
+    });
+    for (int i = 0; i < ordered.size(); ++i) {
+        if (ordered[i]->key() == key) {
+            layout_->moveByViewRows(i, viewRow);
+            persistComposition();
+            return;
+        }
+    }
+}
+
 void CoverExportSession::browseActiveLayerImage()
 {
     auto* layer = activeCoverLayer();
@@ -688,9 +700,14 @@ void CoverExportSession::importCardBodyFont() { requestFont(false, false); }
 
 void CoverExportSession::setActiveLayerVisible(bool visible)
 {
-    if (auto* layer = activeCoverLayer()) {
+    setLayerVisible(activeLayerKey_, visible);
+}
+
+void CoverExportSession::setLayerVisible(const QString& key, bool visible)
+{
+    if (auto* layer = layout_ != nullptr ? layout_->layer(key) : nullptr) {
         layer->setVisible(visible);
-        if (layer->kind() == QStringLiteral("chartFrame")) {
+        if (isActiveChartFrame(layer)) {
             if (!visible) {
                 playback_->pause();
                 playback_->cancelInput();
@@ -705,7 +722,15 @@ void CoverExportSession::setActiveLayerVisible(bool visible)
 }
 void CoverExportSession::setActiveLayerLocked(bool locked)
 {
-    if (auto* layer = activeCoverLayer()) { layer->setLocked(locked); persistComposition(); }
+    setLayerLocked(activeLayerKey_, locked);
+}
+
+void CoverExportSession::setLayerLocked(const QString& key, bool locked)
+{
+    if (auto* layer = layout_ != nullptr ? layout_->layer(key) : nullptr) {
+        layer->setLocked(locked);
+        persistComposition();
+    }
 }
 void CoverExportSession::setActiveLayerOpacity(double opacity)
 {

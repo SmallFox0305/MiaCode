@@ -16,14 +16,11 @@ import MiaCode.UI
 //   * 右栏按 画板 / 图层 分成 panelTab；图层页只显示选中那一层的设置，难度卡
 //     设置跟着「难度卡」这一层走；预设是「布局 ▾」里的二级菜单。
 //
-// 图层行只读地表达状态。ChromeRow 的高亮铺满整行，交互子项放进 contentItem 会被
-// 它从底下穿过去，所以显示/锁定的开关留在右栏「图层」页，行里不放按钮。
 Rectangle {
     id: root
 
     required property var coverSession
     readonly property var session: root.coverSession
-    signal closeRequested()
 
     property real canvasZoom: 1.0
 
@@ -146,16 +143,23 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 8
 
-            Text {
-                text: qsTrId("cover.export_cover")
-                color: Theme.colors.text.active
-                font.family: Theme.uiFont
-                font.pixelSize: Theme.uiFontSize
-                font.bold: true
-                elide: Text.ElideRight
-            }
+            Flickable {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                implicitHeight: difficultySelector.implicitHeight
+                contentWidth: difficultySelector.width
+                contentHeight: height
+                clip: true
+                flickableDirection: Flickable.HorizontalFlick
+                boundsBehavior: Flickable.StopAtBounds
 
-            Item { Layout.fillWidth: true }
+                DifficultySelector {
+                    id: difficultySelector
+                    model: root.session ? root.session.difficulties : []
+                    selectedDifficultyId: root.session ? root.session.selectedDifficultyId : 0
+                    onSelected: difficultyId => { if (root.session) root.session.selectDifficulty(difficultyId) }
+                }
+            }
 
             AppButton {
                 id: layoutMenuButton
@@ -171,12 +175,6 @@ Rectangle {
                 emphasized: true
                 enabled: !!root.session && !root.session.busy
                 onClicked: root.session.exportCover()
-            }
-            AppButton {
-                objectName: "coverCloseButton"
-                text: qsTrId("cover.close")
-                enabled: !!root.session && !root.session.busy
-                onClicked: root.closeRequested()
             }
         }
 
@@ -259,24 +257,6 @@ Rectangle {
             }
         }
 
-        ButtonGroup { id: difficultyGroup }
-
-        Flow {
-            Layout.fillWidth: true
-            spacing: 4
-            Repeater {
-                model: root.session ? root.session.difficulties : []
-                delegate: AppChoiceButton {
-                    required property var modelData
-                    ButtonGroup.group: difficultyGroup
-                    text: modelData.name
-                    difficultyId: modelData.id
-                    checked: root.session && root.session.selectedDifficultyId === modelData.id
-                    onClicked: if (root.session) root.session.selectDifficulty(modelData.id)
-                }
-            }
-        }
-
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
@@ -353,59 +333,17 @@ Rectangle {
                     }
                 }
 
-                ListView {
+                CoverLayerList {
                     id: layers
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: layerHeading.bottom
                     anchors.bottom: layerActions.top
                     anchors.margins: 6
-                    clip: true
-                    spacing: 2
-                    model: root.session ? root.session.layoutModel.layers : []
-                    ScrollBar.vertical: AppScrollBar {}
-
-                    // 状态写在行里，但不放交互子项：ChromeRow 的高亮铺满整行，
-                    // 会从任何按钮底下穿过去（见 ChromeRow 的说明）。显示/锁定的
-                    // 开关因此留在右栏「图层」页，这里只读地表达状态 —— 隐藏用
-                    // disabled 灰，锁定用一个词，而不是彩色 emoji（emoji 在
-                    // Windows 上按彩字渲染，拿不到主题色）。
-                    delegate: ChromeRow {
-                        id: layerRow
-                        required property var modelData
-                        width: ListView.view.width
-                        implicitHeight: 30
-                        selected: root.session && root.session.activeLayerKey === layerRow.modelData.key
-                        onClicked: {
-                            root.selectLayerFromUi(layerRow.modelData.key)
-                        }
-
-                        readonly property color labelColor:
-                            !layerRow.modelData.visible ? Theme.colors.text.disabled
-                          : layerRow.selected ? Theme.colors.text.active
-                          : Theme.colors.text.secondary
-
-                        contentItem: RowLayout {
-                            spacing: 6
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.layerDisplayName(layerRow.modelData)
-                                color: layerRow.labelColor
-                                font.family: Theme.uiFont
-                                font.pixelSize: Theme.uiFontSize
-                                verticalAlignment: Text.AlignVCenter
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                visible: layerRow.modelData.locked
-                                text: qsTrId("cover.lock")
-                                color: Theme.colors.text.disabled
-                                font.family: Theme.uiFont
-                                font.pixelSize: Theme.captionFontSize
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                        }
-                    }
+                    session: root.session
+                    composerItem: composer.item
+                    layerName: root.layerDisplayName
+                    onLayerSelected: key => root.selectLayerFromUi(key)
                 }
 
                 // 图层操作收成一排图标，悬停看全称。窄栏里两行文字按钮既占高度，
@@ -421,7 +359,6 @@ Rectangle {
                     readonly property bool cardSelected: !root.session
                                                          || root.session.activeLayerKey === "card"
                     readonly property bool actionable: !!root.session && !root.session.busy
-                                                       && !layerActions.cardSelected
 
                     Item { Layout.fillWidth: true }
                     IconButton {
@@ -440,13 +377,13 @@ Rectangle {
                         objectName: "coverDuplicateLayerButton"
                         iconSource: Qt.resolvedUrl("icons/copy.svg")
                         tooltip: qsTrId("cover.duplicate_layer")
-                        enabled: layerActions.actionable
+                        enabled: layerActions.actionable && !layerActions.cardSelected
                         onClicked: root.session.duplicateActiveLayer()
                     }
                     IconButton {
                         iconSource: Qt.resolvedUrl("icons/trash.svg")
                         tooltip: qsTrId("cover.delete_layer")
-                        enabled: layerActions.actionable
+                        enabled: layerActions.actionable && !layerActions.cardSelected
                         onClicked: root.session.removeActiveLayer()
                     }
                     Item { Layout.fillWidth: true }
@@ -558,7 +495,7 @@ Rectangle {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: false
                                 Layout.alignment: Qt.AlignTop
-                                spacing: 10
+                                spacing: Theme.settingsRowSpacing
 
                                 LabeledCombo {
                                     objectName: "coverResolutionCombo"
@@ -652,7 +589,7 @@ Rectangle {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: false
                                 Layout.alignment: Qt.AlignTop
-                                spacing: 10
+                                spacing: Theme.settingsRowSpacing
 
                                 Text {
                                     Layout.fillWidth: true
@@ -667,7 +604,7 @@ Rectangle {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     visible: !!root.activeLayer
-                                    spacing: 10
+                                    spacing: Theme.settingsRowSpacing
 
                                     // 层名就是这一页的节标题；显示/锁定跟着它，
                                     // 不再各占一行开关。
@@ -1042,7 +979,7 @@ Rectangle {
         }
 
         body: ColumnLayout {
-            spacing: 10
+            spacing: Theme.settingsRowSpacing
 
             RowLayout {
                 Layout.fillWidth: true

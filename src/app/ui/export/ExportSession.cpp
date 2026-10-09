@@ -1,6 +1,7 @@
 #include "common/LocalizedText.h"
 
 #include "app/ui/export/ExportSession.h"
+#include "app/ui/document/DifficultyOptions.h"
 
 #include "core/chart/document/SimaiDocument.h"
 
@@ -284,10 +285,9 @@ IntroBannerSpec ExportSession::previewIntroSpec() const
 QVariantList ExportSession::batchDifficultyChecks() const
 {
     QVariantList list;
-    for (int id = 1; id <= 7; ++id) {
-        QVariantMap row;
-        row.insert(QStringLiteral("id"), id);
-        row.insert(QStringLiteral("name"), SimaiDocument::difficultyShortName(id));
+    for (const QVariant& option : difficultyOptions({1, 2, 3, 4, 5, 6, 7})) {
+        QVariantMap row = option.toMap();
+        const int id = row.value(QStringLiteral("id")).toInt();
         row.insert(QStringLiteral("checked"), batchSelectedDifficultyIds_.contains(id));
         list.append(row);
     }
@@ -490,15 +490,8 @@ void ExportSession::setSettingsTab(const QString& tabId)
 
 void ExportSession::rebuildDifficultyList()
 {
-    QVariantList next;
-    if (engine() != nullptr) {
-        for (int id : engine()->difficultyIds()) {
-            QVariantMap row;
-            row.insert(QStringLiteral("id"), id);
-            row.insert(QStringLiteral("name"), SimaiDocument::difficultyShortName(id));
-            next.append(row);
-        }
-    }
+    const QVariantList next = engine() != nullptr
+        ? difficultyOptions(engine()->difficultyIds()) : QVariantList();
     if (difficulties_ != next) {
         difficulties_ = next;
         emit difficultiesChanged();

@@ -661,6 +661,18 @@
         <source>Layer</source>
         <translation>レイヤー</translation>
     </message>
+    <message id="cover.bring_to_front">
+        <source>Bring to Front</source>
+        <translation>最前面へ</translation>
+    </message>
+    <message id="cover.send_to_back">
+        <source>Send to Back</source>
+        <translation>最背面へ</translation>
+    </message>
+    <message id="cover.layer_hidden">
+        <source>Hidden</source>
+        <translation>非表示</translation>
+    </message>
     <message id="cover.layers">
         <source>Layers</source>
         <translation>レイヤー</translation>
@@ -844,6 +856,10 @@
     <message id="cover.unlock">
         <source>Unlock</source>
         <translation>ロック解除</translation>
+    </message>
+    <message id="cover.window.title">
+        <source>Cover Editor</source>
+        <translation>カバーエディター</translation>
     </message>
     <message id="cover.window_creation_failed">
         <source>Failed to create the cover export window.</source>

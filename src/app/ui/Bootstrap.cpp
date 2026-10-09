@@ -335,7 +335,7 @@ void Bootstrap::openCoverExportWindow(int difficultyId)
     if (!window->show(rootWindow_, difficultyId)) {
         delete window;
         applicationServices_->uiRequests().postNotice(miacode::NoticeSeverity::Error,
-            miacode::localizedText("cover.export_cover"),
+            miacode::localizedText("cover.window.title"),
             miacode::localizedText("cover.cover_export_failed_1")
                 .arg(miacode::localizedText("cover.window_creation_failed")));
     }

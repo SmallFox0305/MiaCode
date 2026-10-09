@@ -14,7 +14,7 @@ ApplicationWindow {
     readonly property bool nativeMaterialActive: windowChrome.nativeMaterialAvailable
         && Theme.blurMaterialsEnabled && !Theme.backgroundActive
 
-    title: qsTrId("cover.export_cover")
+    title: qsTrId("cover.window.title")
     flags: {
         let value = Qt.Window
         if (window.platform.captionButtons)
@@ -103,7 +103,6 @@ ApplicationWindow {
         anchors.top: titleBar.bottom
         anchors.bottom: parent.bottom
         coverSession: window.coverSession
-        onCloseRequested: window.close()
     }
 
     UiRequestHost {
