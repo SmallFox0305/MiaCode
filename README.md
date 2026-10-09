@@ -15,6 +15,7 @@
 </p>
 
 MiaCode 是一款基于 Qt 6 / C++ / QML 的 maimai 谱面创作工具，集成编辑、实时预览、语法与无理检测、视频导出和封面创作。
+
 <table align="center" width="100%">
   <tr>
     <td align="center" width="50%"><p>截图占位：MiaCode 深色主题</p></td>
@@ -32,23 +33,21 @@ MiaCode 是一款基于 Qt 6 / C++ / QML 的 maimai 谱面创作工具，集成�
 
 nightly 构建包见 [GitHub Actions](https://github.com/Team-MiaCode/MiaCode/actions/workflows/package.yml)，选择 `dev` 分支的构建记录。
 
-支持 Windows（x64 / ARM64）与 macOS（Apple 芯片），下载对应系统和架构的压缩包后解压。
+支持 Windows（x64 / ARM64）ArchLinux（x64）与 macOS（Apple 芯片），下载对应系统和架构的压缩包后解压。
 
 - **Windows**：双击解压目录中的 `MiaCode.exe` 启动。
+- ArchLinux：安装脚本已维护至AUR仓库，可用 `yay -S mia-code-git` 编译安装
 - **macOS**：双击 `MiaCode.app` 启动，也可将其拖入“应用程序”文件夹。若系统显示安全提示，可在解压目录打开终端，执行 `xattr -dr com.apple.quarantine "MiaCode.app"` 后启动。
 
-Linux 用户可按下方步骤从源码构建。
+其他 Linux 用户可按下方步骤从源码构建。
 
 ## 功能介绍
 
 ### 特色
 
 - 支持 Windows、Apple 芯片的 macOS 和 Linux。
-
 - 多组件宽度自由调节，编辑器与预览区面板可左右交换重排。
-
 - 深、浅色主题与中 / 英 / 日三种语言支持，可跟随系统切换。
-
 - 键入修改实时更新，无需处于播放模式，可随时拖拽进度条查看配置。
 
 ### 语法与无理
@@ -113,7 +112,6 @@ Linux 用户可按下方步骤从源码构建。
 </table>
 
 - 自定义背景
-
 - 输入法禁止与全角字符转换
 - 书签跳转段落
 - 快捷编写 Touch 音符
@@ -122,7 +120,6 @@ Linux 用户可按下方步骤从源码构建。
 - 重置摆键到 1 号
 - 自动补全时值
 - 一键谱面整理
-
 - 音视频工具
 - BPM 与延迟检测
 
@@ -149,14 +146,6 @@ Linux 用户可按下方步骤从源码构建。
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build\build-win.ps1 -Toolchain msvc -BuildJobs 4
 ```
-### ArchLinux
-
--git版本已由@Small_Fox0305开发者发布并维护至AUR 执行以下命令即可安装
-```bash
-yay -S mia-code-git
-```
-
-ARM64 主机使用 `-Toolchain msvc-arm64`，并选择独立构建目录；参数见 [scripts/README.md](scripts/README.md)。
 
 ### macOS
 
