@@ -198,3 +198,6 @@ __pycache__/
 # Throwaway slide-arrow-count analysis script + its generated CSV (repo root).
 /slide_arrow_count.py
 /slide_arrow_count.csv
+
+# clangd project index cache.
+/.cache/clangd/
