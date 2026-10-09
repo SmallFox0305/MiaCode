@@ -12,6 +12,7 @@ Rectangle {
     required property var previewSession
     required property var previewSettings
     readonly property var session: pages && pages.exportSession ? pages.exportSession : null
+    readonly property bool settingsAvailable: !!root.session && root.session.unavailableReason.length === 0
     readonly property alias cornerSourceItem: heading
     readonly property bool introSettingsEnabled: !!root.session
                                                   && root.session.introEnabled
@@ -104,47 +105,21 @@ Rectangle {
             Layout.topMargin: Theme.workspaceSectionTopMargin
             spacing: 2
 
-            Text {
-                Layout.fillWidth: true
-                Layout.leftMargin: root.tabInset
-                Layout.rightMargin: root.tabInset
-                visible: !!(root.session && root.session.unavailableReason)
-                text: root.session ? root.session.unavailableReason : ""
-                color: Theme.colors.text.secondary
-                font.family: Theme.uiFont
-                font.pixelSize: Theme.uiFontSize
-                wrapMode: Text.WordWrap
-            }
-
             AppTabBar {
                 Layout.fillWidth: true
                 Layout.leftMargin: root.tabInset
-                visible: root.session && !root.session.unavailableReason
                 tabs: root.settingsTabs
                 selectedId: root.session ? root.session.settingsTab : "output"
                 buttonObjectNamePrefix: "exportSettingsTab_"
                 onTabSelected: function(tabId) { if (root.session) root.session.settingsTab = tabId }
             }
 
-            ButtonGroup { id: difficultyGroup }
-
-            Flow {
-                id: difficultyRow
+            DifficultySelector {
                 Layout.fillWidth: true
                 Layout.leftMargin: root.tabInset
-                Layout.preferredHeight: Theme.controlMinHeight
-                spacing: 4
-                Repeater {
-                    model: root.session ? root.session.difficulties : []
-                    delegate: AppChoiceButton {
-                        required property var modelData
-                        ButtonGroup.group: difficultyGroup
-                        text: modelData.name
-                        difficultyId: modelData.id
-                        checked: root.session && root.session.selectedDifficultyId === modelData.id
-                        onClicked: if (root.session) root.session.selectDifficulty(modelData.id)
-                    }
-                }
+                model: root.session ? root.session.difficulties : []
+                selectedDifficultyId: root.session ? root.session.selectedDifficultyId : 0
+                onSelected: difficultyId => { if (root.session) root.session.selectDifficulty(difficultyId) }
             }
 
             Rectangle {
@@ -162,21 +137,33 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.topMargin: Theme.panelPadding
-                Layout.minimumHeight: 200
-                visible: root.session && !(root.session && root.session.unavailableReason)
+                Layout.minimumHeight: 0
                 clip: true
                 contentWidth: width
-                contentHeight: settingsBody.implicitHeight
+                contentHeight: root.settingsAvailable ? settingsBody.implicitHeight : emptyNotice.implicitHeight
                 boundsBehavior: Flickable.StopAtBounds
                 ScrollBar.vertical: AppScrollBar {
                     policy: settingsFlickable.contentHeight > settingsFlickable.height
                         ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
                 }
 
+                Text {
+                    id: emptyNotice
+                    x: root.formInset
+                    width: Math.max(0, settingsFlickable.width - 2 * root.formInset)
+                    visible: !root.settingsAvailable
+                    text: root.session ? root.session.unavailableReason : ""
+                    color: Theme.colors.text.secondary
+                    font.family: Theme.uiFont
+                    font.pixelSize: Theme.uiFontSize
+                    wrapMode: Text.WordWrap
+                }
+
                 AppTabPages {
                     id: settingsBody
+                    visible: root.settingsAvailable
                     x: root.formInset
-                    width: settingsFlickable.width - 2 * root.formInset
+                    width: Math.max(0, settingsFlickable.width - 2 * root.formInset)
                     currentIndex: root.session && root.session.settingsTab === "batch" ? 0
                                   : root.session && root.session.settingsTab === "output" ? 1
                                   : root.session && root.session.settingsTab === "intro" ? 3 : 2
@@ -186,21 +173,31 @@ Rectangle {
                         objectName: "exportBatchSettingsPage"
                         Layout.fillHeight: false
                         Layout.alignment: Qt.AlignTop
-                        spacing: 10
+                        spacing: Theme.settingsRowSpacing
                         Layout.fillWidth: true
 
-                        SettingsSection {
-                            title: qsTrId("dialog.batch_export.difficulty")
-                            inlineRule: true
-                            first: true
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.settingsRowSpacing
 
+                            Text {
+                                Layout.preferredWidth: 120
+                                Layout.alignment: Qt.AlignTop
+                                Layout.topMargin: (Theme.controlMinHeight - implicitHeight) / 2
+                                text: qsTrId("dialog.batch_export.difficulty")
+                                color: Theme.colors.text.secondary
+                                font.family: Theme.uiFont
+                                font.pixelSize: Theme.uiFontSize
+                            }
                             Flow {
                                 Layout.fillWidth: true
-                                spacing: 8
+                                spacing: Theme.settingsRowSpacing
                                 Repeater {
                                     model: root.session ? root.session.batchDifficultyChecks : []
-                                    delegate: AppSwitch {
+                                    delegate: AppCheckBox {
                                         required property var modelData
+                                        implicitHeight: Theme.controlMinHeight
+                                        font.pixelSize: Theme.uiFontSize
                                         text: modelData.name
                                         checked: modelData.checked
                                         onToggled: if (root.session) root.session.setBatchDifficultyChecked(modelData.id, checked)
@@ -209,37 +206,51 @@ Rectangle {
                             }
                         }
 
-                        SettingsSection {
-                            title: qsTrId("qml.output_folder")
-                            inlineRule: true
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.settingsRowSpacing
 
-                            RowLayout {
+                            Text {
+                                Layout.preferredWidth: 120
+                                text: qsTrId("qml.output_folder")
+                                color: Theme.colors.text.secondary
+                                font.family: Theme.uiFont
+                                font.pixelSize: Theme.uiFontSize
+                                wrapMode: Text.WordWrap
+                            }
+                            AppTextField {
+                                objectName: "batchOutputDirectoryField"
                                 Layout.fillWidth: true
-                                AppTextField {
-                                    objectName: "batchOutputDirectoryField"
-                                    Layout.fillWidth: true
-                                    text: root.session ? root.session.batchOutputDirectory : ""
-                                    onEditingFinished: if (root.session) root.session.batchOutputDirectory = text
-                                }
-                                AppButton {
-                                    text: qsTrId("action.browse")
-                                    onClicked: if (root.session) root.session.browseBatchOutputDirectory()
-                                }
+                                text: root.session ? root.session.batchOutputDirectory : ""
+                                onEditingFinished: if (root.session) root.session.batchOutputDirectory = text
+                            }
+                            AppButton {
+                                text: qsTrId("action.browse")
+                                onClicked: if (root.session) root.session.browseBatchOutputDirectory()
                             }
                         }
 
                         SettingsSection {
                             title: qsTrId("dialog.batch_export.chart_folders")
-                            inlineRule: true
+
                             badge: root.session && root.session.chartDirectories.length > 0
                                    ? String(root.session.chartDirectories.length) : ""
 
-                            // This was a ListView capped at 112px because it shared
-                            // a column with the settings tabs and would otherwise
-                            // starve them. On its own tab there is nothing left to
-                            // starve, so the rows lay out at full height and the
-                            // tab's own Flickable scrolls them — which also keeps a
-                            // second scrollable from nesting inside that one.
+                            RowLayout {
+                                id: chartDirectoryButtons
+                                Layout.fillWidth: true
+                                AppButton {
+                                    text: qsTrId("qml.add")
+                                    onClicked: if (root.session) root.session.addChartDirectories()
+                                }
+                                AppButton {
+                                    text: qsTrId("dialog.batch_export.clear")
+                                    enabled: root.session && root.session.chartDirectories.length > 0
+                                    onClicked: if (root.session) root.session.clearChartDirectories()
+                                }
+
+                            }
+
                             Rectangle {
                                 id: chartDirectoryGroove
                                 objectName: "batchChartDirectoryList"
@@ -339,19 +350,7 @@ Rectangle {
                                 }
                             }
 
-                            RowLayout {
-                                id: chartDirectoryButtons
-                                Layout.fillWidth: true
-                                AppButton {
-                                    text: qsTrId("qml.add")
-                                    onClicked: if (root.session) root.session.addChartDirectories()
-                                }
-                                AppButton {
-                                    text: qsTrId("dialog.batch_export.clear")
-                                    onClicked: if (root.session) root.session.clearChartDirectories()
-                                }
-                                Item { Layout.fillWidth: true }
-                            }
+
                         }
                     }
 
@@ -359,12 +358,12 @@ Rectangle {
                     ColumnLayout {
                         Layout.fillHeight: false
                         Layout.alignment: Qt.AlignTop
-                        spacing: Theme.panelPadding
+                        spacing: Theme.settingsRowSpacing
                         Layout.fillWidth: true
 
                         ColumnLayout {
                             visible: root.session && root.session.activeTab === "export"
-                            spacing: Theme.chromePadding
+                            spacing: Theme.settingsLabelSpacing
                             Layout.fillWidth: true
 
                             Text {
@@ -394,7 +393,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
-                                spacing: Theme.chromePadding
+                                spacing: Theme.settingsLabelSpacing
                                 Text {
                                     text: qsTrId("dialog.video_export.resolution")
                                     color: Theme.colors.text.secondary
@@ -412,7 +411,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
-                                spacing: Theme.chromePadding
+                                spacing: Theme.settingsLabelSpacing
                                 Text {
                                     text: qsTrId("dialog.video_export.fps")
                                     color: Theme.colors.text.secondary
@@ -436,7 +435,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
-                                spacing: Theme.chromePadding
+                                spacing: Theme.settingsLabelSpacing
                                 Text {
                                     text: qsTrId("dialog.video_export.audio_bitrate")
                                     color: Theme.colors.text.secondary
@@ -466,7 +465,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
-                                spacing: Theme.chromePadding
+                                spacing: Theme.settingsLabelSpacing
                                 Text {
                                     text: qsTrId("dialog.video_export.preset")
                                     color: Theme.colors.text.secondary
@@ -483,7 +482,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
-                                spacing: Theme.chromePadding
+                                spacing: Theme.settingsLabelSpacing
                                 Text {
                                     text: qsTrId("dialog.video_export.size_preset")
                                     color: Theme.colors.text.secondary
@@ -501,7 +500,7 @@ Rectangle {
 
                         SettingsSection {
                             title: qsTrId("video_export.export_range")
-                            inlineRule: true
+
                             visible: root.session && root.session.activeTab === "export"
 
                             ExportRangeSelector {
@@ -513,7 +512,7 @@ Rectangle {
                             }
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: Theme.chromePadding
+                                spacing: Theme.settingsLabelSpacing
 
                                 Text {
                                     text: qsTrId("dialog.video_export.range.start")
@@ -540,7 +539,7 @@ Rectangle {
                             }
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: Theme.chromePadding
+                                spacing: Theme.settingsLabelSpacing
 
                                 Text {
                                     text: qsTrId("dialog.video_export.range.end")
@@ -564,7 +563,7 @@ Rectangle {
 
                         SettingsSection {
                             title: ""
-                            inlineRule: true
+
 
                             AppSwitch {
                                 text: qsTrId("dialog.video_export.option.show_object_stats")
@@ -597,7 +596,7 @@ Rectangle {
                     ColumnLayout {
                         Layout.fillHeight: false
                         Layout.alignment: Qt.AlignTop
-                        spacing: 10
+                        spacing: Theme.settingsRowSpacing
                         Layout.fillWidth: true
 
                         // Kept outside every section: gating this on `introEnabled`
@@ -614,11 +613,13 @@ Rectangle {
 
                         SettingsSection {
                             title: qsTrId("qml.visuals")
-                            inlineRule: true
+
                             enabled: root.introSettingsEnabled
 
                             RowLayout {
                                 Text {
+                                    font.family: Theme.uiFont
+                                    font.pixelSize: Theme.uiFontSize
                                     text: qsTrId("dialog.preferences.background_group")
                                     color: Theme.colors.text.secondary
                                     Layout.preferredWidth: 120
@@ -644,6 +645,8 @@ Rectangle {
                             }
                             RowLayout {
                                 Text {
+                                    font.family: Theme.uiFont
+                                    font.pixelSize: Theme.uiFontSize
                                     text: qsTrId("cover.chart_type")
                                     color: Theme.colors.text.secondary
                                     Layout.preferredWidth: 120
@@ -674,12 +677,14 @@ Rectangle {
 
                         SettingsSection {
                             title: qsTrId("qml.difficulty_card_fonts")
-                            inlineRule: true
+
                             enabled: root.introSettingsEnabled
 
                             RowLayout {
                                 Layout.fillWidth: true
                                 Text {
+                                    font.family: Theme.uiFont
+                                    font.pixelSize: Theme.uiFontSize
                                     text: qsTrId("card_font.title")
                                     color: Theme.colors.text.secondary
                                     Layout.preferredWidth: 120
@@ -702,6 +707,8 @@ Rectangle {
                             RowLayout {
                                 Layout.fillWidth: true
                                 Text {
+                                    font.family: Theme.uiFont
+                                    font.pixelSize: Theme.uiFontSize
                                     text: qsTrId("card_font.body")
                                     color: Theme.colors.text.secondary
                                     Layout.preferredWidth: 120
@@ -786,6 +793,7 @@ Rectangle {
                 Item { Layout.fillWidth: true }
                 AppButton {
                     text: root.session && root.session.exportRunning ? qsTrId("video_export.cancel_export") : qsTrId("video_export.start_export")
+                    enabled: !!root.session && (root.session.exportRunning || root.settingsAvailable)
                     emphasized: !(root.session && root.session.exportRunning)
                     onClicked: {
                         if (!root.session) return

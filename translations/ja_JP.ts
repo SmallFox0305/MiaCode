@@ -2106,16 +2106,16 @@ Restore the backup from %1?</source>
         <translation>動画出力</translation>
     </message>
     <message id="export_page.no_difficulty_is_available_to">
-        <source>No difficulty is available to export.</source>
-        <translation>出力できる難易度がありません。</translation>
+        <source>No chart to export.</source>
+        <translation>出力できる譜面がありません。</translation>
     </message>
     <message id="export_page.pack_as_zip">
         <source>Pack as ZIP</source>
         <translation>ZIP パッケージ化</translation>
     </message>
     <message id="export_page.the_selected_difficulty_has_no">
-        <source>The selected difficulty has no chart content to export.</source>
-        <translation>選択中の難易度には出力できる譜面内容がありません。</translation>
+        <source>This difficulty has no chart.</source>
+        <translation>この難易度には譜面がありません。</translation>
     </message>
     <message id="file_filter.audio">
         <source>Audio (*.wav *.mp3 *.ogg *.flac)</source>
@@ -3394,8 +3394,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>オフセット</translation>
     </message>
     <message id="qml.one_field_equals_value_per_line">
-        <source>One &amp;field=value per line</source>
-        <translation>1 行に 1 つの &amp;field=value</translation>
+        <source>&amp;field=value</source>
+        <translation>&amp;フィールド=値</translation>
     </message>
     <message id="qml.open_chart_info_or_add_a_difficulty">
         <source>Open metadata, or add a difficulty</source>

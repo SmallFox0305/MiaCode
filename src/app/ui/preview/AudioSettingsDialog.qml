@@ -95,7 +95,7 @@ AppDialog {
     }
 
     body: ColumnLayout {
-        spacing: 8
+        spacing: Theme.settingsRowSpacing
 
         Repeater {
             model: root.keys

@@ -2106,16 +2106,16 @@ Restore the backup from %1?</source>
         <translation>视频导出</translation>
     </message>
     <message id="export_page.no_difficulty_is_available_to">
-        <source>No difficulty is available to export.</source>
-        <translation>暂无可导出的难度。</translation>
+        <source>No chart to export.</source>
+        <translation>暂无可导出的谱面。</translation>
     </message>
     <message id="export_page.pack_as_zip">
         <source>Pack as ZIP</source>
         <translation>打包 ZIP</translation>
     </message>
     <message id="export_page.the_selected_difficulty_has_no">
-        <source>The selected difficulty has no chart content to export.</source>
-        <translation>当前难度暂无谱面内容，无法导出视频。</translation>
+        <source>This difficulty has no chart.</source>
+        <translation>该难度谱面为空。</translation>
     </message>
     <message id="file_filter.audio">
         <source>Audio (*.wav *.mp3 *.ogg *.flac)</source>
@@ -3394,8 +3394,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>延迟</translation>
     </message>
     <message id="qml.one_field_equals_value_per_line">
-        <source>One &amp;field=value per line</source>
-        <translation>每行一个 &amp;字段=值</translation>
+        <source>&amp;field=value</source>
+        <translation>&amp;字段=值</translation>
     </message>
     <message id="qml.open_chart_info_or_add_a_difficulty">
         <source>Open metadata, or add a difficulty</source>

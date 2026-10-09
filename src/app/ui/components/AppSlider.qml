@@ -32,12 +32,12 @@ Slider {
     }
 
     hoverEnabled: true
-    implicitHeight: 24
+    implicitHeight: Theme.controlMinHeight
     padding: 0
 
     background: Item {
         implicitWidth: 200
-        implicitHeight: 24
+        implicitHeight: Theme.controlMinHeight
 
         Rectangle {
             id: track

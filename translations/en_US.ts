@@ -2106,16 +2106,16 @@ Restore the backup from %1?</translation>
         <translation>Export Video</translation>
     </message>
     <message id="export_page.no_difficulty_is_available_to">
-        <source>No difficulty is available to export.</source>
-        <translation>No difficulty is available to export.</translation>
+        <source>No chart to export.</source>
+        <translation>No chart to export.</translation>
     </message>
     <message id="export_page.pack_as_zip">
         <source>Pack as ZIP</source>
         <translation>Pack as ZIP</translation>
     </message>
     <message id="export_page.the_selected_difficulty_has_no">
-        <source>The selected difficulty has no chart content to export.</source>
-        <translation>The selected difficulty has no chart content to export.</translation>
+        <source>This difficulty has no chart.</source>
+        <translation>This difficulty has no chart.</translation>
     </message>
     <message id="file_filter.audio">
         <source>Audio (*.wav *.mp3 *.ogg *.flac)</source>
@@ -3394,8 +3394,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>Offset</translation>
     </message>
     <message id="qml.one_field_equals_value_per_line">
-        <source>One &amp;field=value per line</source>
-        <translation>One &amp;field=value per line</translation>
+        <source>&amp;field=value</source>
+        <translation>&amp;field=value</translation>
     </message>
     <message id="qml.open_chart_info_or_add_a_difficulty">
         <source>Open metadata, or add a difficulty</source>
