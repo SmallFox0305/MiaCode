@@ -12,10 +12,10 @@
 class QWindow;
 class QEvent;
 
-// v2 WindowTitleBar chrome. Attach only from Bootstrap (never v1).
+// Shared WindowTitleBar chrome. Attach from the owning window controller.
 // Windows: native resize frame and system commands; QML owns the caption.
 // macOS: full-size content; native title text hidden; QWindow::title kept.
-// All platforms: window state transitions and geometry persisted per window.
+// A non-empty state key enables geometry persistence for that window.
 // titleBarLeadingInset: clearance past macOS traffic lights (0 elsewhere).
 namespace miacode::ui {
 

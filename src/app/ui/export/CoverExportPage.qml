@@ -634,15 +634,9 @@ Rectangle {
                                     LabeledSlider {
                                         label: qsTrId("cover.brightness")
                                         labelWidth: root.labelWidth
-                                        from: 0
-                                        to: 1
-                                        stepSize: 0.01
-                                        decimals: 0
-                                        suffix: "%"
-                                        readout: Math.round((root.session ? root.session.backgroundBrightness : 0.45) * 100) + "%"
-                                        value: root.session ? root.session.backgroundBrightness : 0.45
+                                        value: (root.session ? root.session.backgroundBrightness : 0.45) * 100
                                         enabled: !!root.session && root.session.backgroundMode !== 2
-                                        onMoved: function(value) { if (root.session) root.session.backgroundBrightness = value }
+                                        onMoved: function(value) { if (root.session) root.session.backgroundBrightness = value / 100 }
                                     }
                                     AppSwitch {
                                         text: qsTrId("cover.blur_background")
@@ -709,22 +703,16 @@ Rectangle {
                                     LabeledSlider {
                                         label: qsTrId("cover.opacity")
                                         labelWidth: root.labelWidth
-                                        from: 0
-                                        to: 1
-                                        stepSize: 0.01
-                                        readout: Math.round((root.activeLayer ? root.activeLayer.opacity : 1) * 100) + "%"
-                                        value: root.activeLayer ? root.activeLayer.opacity : 1
-                                        onMoved: function(value) { if (root.session) root.session.setActiveLayerOpacity(value) }
+                                        value: (root.activeLayer ? root.activeLayer.opacity : 1) * 100
+                                        onMoved: function(value) { if (root.session) root.session.setActiveLayerOpacity(value / 100) }
                                     }
                                     LabeledSlider {
                                         label: qsTrId("cover.size")
                                         labelWidth: root.labelWidth
-                                        from: 0.05
-                                        to: 1.5
-                                        stepSize: 0.01
-                                        readout: Math.round((root.activeLayer ? root.activeLayer.sizeFraction : 0.85) * 100) + "%"
-                                        value: root.activeLayer ? root.activeLayer.sizeFraction : 0.85
-                                        onMoved: function(value) { if (root.session) root.session.setActiveLayerSizeFraction(value) }
+                                        from: 5
+                                        to: 150
+                                        value: (root.activeLayer ? root.activeLayer.sizeFraction : 0.85) * 100
+                                        onMoved: function(value) { if (root.session) root.session.setActiveLayerSizeFraction(value / 100) }
                                     }
 
                                     // ---- 图片 ----
@@ -932,24 +920,16 @@ Rectangle {
                                         LabeledSlider {
                                             label: qsTrId("cover.brightness")
                                             labelWidth: root.labelWidth
-                                            from: 0
-                                            to: 1
-                                            stepSize: 0.01
                                             enabled: root.activeLayer && root.activeLayer.frameBgMode === "image"
-                                            readout: Math.round((root.activeLayer ? root.activeLayer.frameBgBrightness : 0.8) * 100) + "%"
-                                            value: root.activeLayer ? root.activeLayer.frameBgBrightness : 0.8
-                                            onMoved: function(value) { if (root.session) root.session.setActiveLayerFrameBackgroundBrightness(value) }
+                                            value: (root.activeLayer ? root.activeLayer.frameBgBrightness : 0.8) * 100
+                                            onMoved: function(value) { if (root.session) root.session.setActiveLayerFrameBackgroundBrightness(value / 100) }
                                         }
                                         LabeledSlider {
                                             label: qsTrId("cover.transparency")
                                             labelWidth: root.labelWidth
-                                            from: 0
-                                            to: 1
-                                            stepSize: 0.01
                                             enabled: root.activeLayer && root.activeLayer.frameBgMode === "transparent"
-                                            readout: Math.round((root.activeLayer ? root.activeLayer.frameBgTransparency : 0.5) * 100) + "%"
-                                            value: root.activeLayer ? root.activeLayer.frameBgTransparency : 0.5
-                                            onMoved: function(value) { if (root.session) root.session.setActiveLayerFrameBackgroundTransparency(value) }
+                                            value: (root.activeLayer ? root.activeLayer.frameBgTransparency : 0.5) * 100
+                                            onMoved: function(value) { if (root.session) root.session.setActiveLayerFrameBackgroundTransparency(value / 100) }
                                         }
                                     }
 

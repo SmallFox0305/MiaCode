@@ -90,8 +90,13 @@ ComboBox {
 
         y: root.height + 2
         implicitWidth: Math.max(root.width, 100, optionWidth + leftPadding + rightPadding)
-        width: Math.min(implicitWidth, Overlay.overlay ? Overlay.overlay.width : implicitWidth)
+        width: Overlay.overlay
+            ? Math.min(implicitWidth, Math.max(0, Overlay.overlay.width - 2 * margins))
+            : implicitWidth
         implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 260)
+        height: Overlay.overlay
+            ? Math.min(implicitHeight, Math.max(0, Overlay.overlay.height - 2 * margins))
+            : implicitHeight
 
         onAboutToShow: {
             let widest = 0

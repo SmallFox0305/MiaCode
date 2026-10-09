@@ -340,6 +340,9 @@ bool WindowChrome::eventFilter(QObject* watched, QEvent* event)
 
 void WindowChrome::restoreWindowState()
 {
+    if (stateKey_.isEmpty()) {
+        return;
+    }
     const QJsonObject saved = PreferenceDocument::loadPreferencesObject()
         .value(QStringLiteral("ui")).toObject()
         .value(stateKey_).toObject();
@@ -417,7 +420,7 @@ void WindowChrome::captureWindowState()
 
 void WindowChrome::saveWindowState()
 {
-    if (window_.isNull()) {
+    if (window_.isNull() || stateKey_.isEmpty()) {
         return;
     }
     captureWindowState();
