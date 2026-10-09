@@ -196,6 +196,9 @@ Item {
         case "compressVideo":
             root.mediaTools.compressBackgroundVideo()
             break
+        case "alignPvToAudio":
+            root.mediaTools.alignBackgroundVideoToTrack()
+            break
         case "batchCompress":
             batchCompressionDialog.open()
             break

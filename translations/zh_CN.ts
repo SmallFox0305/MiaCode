@@ -2173,6 +2173,10 @@ Restore the backup from %1?</source>
         <source>Audio/Video Processing</source>
         <translation>音频/视频处理</translation>
     </message>
+    <message id="media_tools.align_pv_to_audio">
+        <source>Align PV to Track Audio</source>
+        <translation>视频对齐音频</translation>
+    </message>
     <message id="media_tools.background_mp4_video">
         <source>background .mp4 video</source>
         <translation>背景视频 .mp4</translation>
@@ -2440,6 +2444,30 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
     <message id="media_tools.prepend_pv_black_screen">
         <source>Prepend PV Black Screen</source>
         <translation>视频前置黑幕</translation>
+    </message>
+    <message id="media_tools.analyzing_audio_alignment">
+        <source>Analyzing audio alignment...</source>
+        <translation>正在分析音频对齐...</translation>
+    </message>
+    <message id="media_tools.video_audio_missing">
+        <source>The background video has no audio stream to align.</source>
+        <translation>背景视频没有可用于对齐的音轨。</translation>
+    </message>
+    <message id="media_tools.video_alignment_cancelled">
+        <source>Audio alignment canceled.</source>
+        <translation>已取消音视频对齐。</translation>
+    </message>
+    <message id="media_tools.video_alignment_offset_failed">
+        <source>Could not find a reliable offset between track.mp3 and the PV audio.</source>
+        <translation>无法可靠检测 track.mp3 与 PV 音轨之间的偏移。</translation>
+    </message>
+    <message id="media_tools.video_alignment_already_aligned">
+        <source>The PV audio is already aligned with track.mp3 (offset %1 s); no changes were made.</source>
+        <translation>PV 音轨已与 track.mp3 对齐（偏移 %1 秒），未修改文件。</translation>
+    </message>
+    <message id="media_tools.video_aligned_to_track_1_2">
+        <source>Aligned %1 to track.mp3 with offset %2 s (original backed up as %3).</source>
+        <translation>已将 %1 按 %2 秒偏移与 track.mp3 对齐（原文件已备份为 %3）。</translation>
     </message>
     <message id="media_tools.prepend_track_silence">
         <source>Prepend Track Silence</source>

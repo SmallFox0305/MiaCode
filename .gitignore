@@ -198,3 +198,5 @@ __pycache__/
 # Throwaway slide-arrow-count analysis script + its generated CSV (repo root).
 /slide_arrow_count.py
 /slide_arrow_count.csv
+scripts/build/build-win.ps1
+scripts/build/windows-toolchain.psd1

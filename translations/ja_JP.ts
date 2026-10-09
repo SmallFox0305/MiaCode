@@ -2173,6 +2173,10 @@ Restore the backup from %1?</source>
         <source>Audio/Video Processing</source>
         <translation>オーディオ/動画処理</translation>
     </message>
+    <message id="media_tools.align_pv_to_audio">
+        <source>Align PV to Track Audio</source>
+        <translation>PVを音声に合わせる</translation>
+    </message>
     <message id="media_tools.background_mp4_video">
         <source>background .mp4 video</source>
         <translation>背景動画 .mp4</translation>
@@ -2440,6 +2444,30 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
     <message id="media_tools.prepend_pv_black_screen">
         <source>Prepend PV Black Screen</source>
         <translation>動画の先頭に黒画面を追加</translation>
+    </message>
+    <message id="media_tools.analyzing_audio_alignment">
+        <source>Analyzing audio alignment...</source>
+        <translation>音声の同期を分析中...</translation>
+    </message>
+    <message id="media_tools.video_audio_missing">
+        <source>The background video has no audio stream to align.</source>
+        <translation>背景動画に同期可能な音声トラックがありません。</translation>
+    </message>
+    <message id="media_tools.video_alignment_cancelled">
+        <source>Audio alignment canceled.</source>
+        <translation>音声の同期をキャンセルしました。</translation>
+    </message>
+    <message id="media_tools.video_alignment_offset_failed">
+        <source>Could not find a reliable offset between track.mp3 and the PV audio.</source>
+        <translation>track.mp3 と PV 音声の間で信頼できるオフセットを検出できませんでした。</translation>
+    </message>
+    <message id="media_tools.video_alignment_already_aligned">
+        <source>The PV audio is already aligned with track.mp3 (offset %1 s); no changes were made.</source>
+        <translation>PV 音声は track.mp3 と既に同期しています（オフセット %1 秒）。ファイルは変更されていません。</translation>
+    </message>
+    <message id="media_tools.video_aligned_to_track_1_2">
+        <source>Aligned %1 to track.mp3 with offset %2 s (original backed up as %3).</source>
+        <translation>%1 を %2 秒のオフセットで track.mp3 に合わせました（元ファイルは %3 にバックアップ）。</translation>
     </message>
     <message id="media_tools.prepend_track_silence">
         <source>Prepend Track Silence</source>

@@ -2173,6 +2173,10 @@ Restore the backup from %1?</translation>
         <source>Audio/Video Processing</source>
         <translation>Audio/Video Processing</translation>
     </message>
+    <message id="media_tools.align_pv_to_audio">
+        <source>Align PV to Track Audio</source>
+        <translation>Align PV to Track Audio</translation>
+    </message>
     <message id="media_tools.background_mp4_video">
         <source>background .mp4 video</source>
         <translation>background .mp4 video</translation>
@@ -2440,6 +2444,30 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
     <message id="media_tools.prepend_pv_black_screen">
         <source>Prepend PV Black Screen</source>
         <translation>Prepend PV Black Screen</translation>
+    </message>
+    <message id="media_tools.analyzing_audio_alignment">
+        <source>Analyzing audio alignment...</source>
+        <translation>Analyzing audio alignment...</translation>
+    </message>
+    <message id="media_tools.video_audio_missing">
+        <source>The background video has no audio stream to align.</source>
+        <translation>The background video has no audio stream to align.</translation>
+    </message>
+    <message id="media_tools.video_alignment_cancelled">
+        <source>Audio alignment canceled.</source>
+        <translation>Audio alignment canceled.</translation>
+    </message>
+    <message id="media_tools.video_alignment_offset_failed">
+        <source>Could not find a reliable offset between track.mp3 and the PV audio.</source>
+        <translation>Could not find a reliable offset between track.mp3 and the PV audio.</translation>
+    </message>
+    <message id="media_tools.video_alignment_already_aligned">
+        <source>The PV audio is already aligned with track.mp3 (offset %1 s); no changes were made.</source>
+        <translation>The PV audio is already aligned with track.mp3 (offset %1 s); no changes were made.</translation>
+    </message>
+    <message id="media_tools.video_aligned_to_track_1_2">
+        <source>Aligned %1 to track.mp3 with offset %2 s (original backed up as %3).</source>
+        <translation>Aligned %1 to track.mp3 with offset %2 s (original backed up as %3).</translation>
     </message>
     <message id="media_tools.prepend_track_silence">
         <source>Prepend Track Silence</source>

@@ -15,6 +15,11 @@ AppMenu {
         onTriggered: root.toolRequested("prependPv")
     }
     AppMenuAction {
+        text: qsTrId("media_tools.align_pv_to_audio")
+        enabled: root.documentAvailable
+        onTriggered: root.toolRequested("alignPvToAudio")
+    }
+    AppMenuAction {
         text: qsTrId("media_tools.pv_compress")
         enabled: root.documentAvailable
         onTriggered: root.toolRequested("compressVideo")
