@@ -101,7 +101,10 @@ public:
 
     QObject* uiRequests() { return uiRequests_; }
     bool pageSessionActive() const override { return pageSessionActive_; }
-    bool rangePreviewAvailable() const { return pageSessionActive_ && activeTab_ == QLatin1String("export"); }
+    bool rangePreviewAvailable() const
+    {
+        return pageSessionActive_ && activeTab_ == QLatin1String("export") && unavailableReason_.isEmpty();
+    }
     bool rangePlaybackEnabled() const { return rangePlaybackEnabled_; }
     void setRangePlaybackEnabled(bool enabled);
     int selectedDifficultyId() const override { return selectedDifficultyId_; }

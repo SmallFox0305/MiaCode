@@ -301,6 +301,7 @@ void ExportSession::setUnavailableReason(const QString& reason)
     }
     unavailableReason_ = reason;
     emit unavailableReasonChanged();
+    emit rangePlaybackStateChanged();
 }
 
 bool ExportSession::difficultyExists(int difficultyId) const
@@ -544,10 +545,26 @@ void ExportSession::savePreferences() const
 void ExportSession::seedFromDifficulty(int difficultyId)
 {
     if (engine() == nullptr || !difficultyHasChartBody(difficultyId)) {
+        VideoExportTask emptyTask;
+        if (hasSeededTask_) {
+            miacode::video_export::copyVideoExportUserSettings(task_, &emptyTask);
+        }
+        task_ = std::move(emptyTask);
+        chartDurationSeconds_ = 0.0;
+        if (!hasSeededTask_) {
+            applyPreferences();
+            hasSeededTask_ = true;
+        }
         setUnavailableReason(
             difficultyExists(difficultyId)
                 ? qtTrId("export_page.the_selected_difficulty_has_no")
                 : qtTrId("export_page.no_difficulty_is_available_to"));
+        setRangePlaybackEnabled(false);
+        clearPendingSelectionRangeExport();
+        emit outputChanged();
+        emit videoChanged();
+        emit introChanged();
+        emit rangeChanged();
         return;
     }
     setUnavailableReason(QString());
@@ -585,7 +602,7 @@ void ExportSession::syncAudition()
         return;
     }
     if (!difficultyHasChartBody(selectedDifficultyId_)) {
-        stopAudition();
+        engine()->clearAudition();
         return;
     }
     const bool applySelectionRange = hasPendingSelectionRangeExport_;
