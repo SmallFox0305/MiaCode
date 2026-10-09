@@ -1913,6 +1913,10 @@ Restore the backup from %1?</translation>
         <source>&amp;first must be a valid number of seconds.</source>
         <translation>&amp;first must be a valid number of seconds.</translation>
     </message>
+    <message id="document.manage_designer_names">
+        <source>Manage</source>
+        <translation>Manage</translation>
+    </message>
     <message id="document.maidata_txt_already_exists_in">
         <source>maidata.txt already exists in the selected folder. Overwrite it?</source>
         <translation>maidata.txt already exists in the selected folder. Overwrite it?</translation>
@@ -2605,9 +2609,33 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <source>PV</source>
         <translation>PV</translation>
     </message>
+    <message id="metadata.import">
+        <source>Import</source>
+        <translation>Import</translation>
+    </message>
+    <message id="metadata.load_audio_info">
+        <source>Load audio info</source>
+        <translation>Load audio info</translation>
+    </message>
+    <message id="metadata.remove">
+        <source>Remove</source>
+        <translation>Remove</translation>
+    </message>
+    <message id="metadata.no_pv">
+        <source>No PV</source>
+        <translation>No PV</translation>
+    </message>
+    <message id="metadata.no_cover">
+        <source>No cover</source>
+        <translation>No cover</translation>
+    </message>
+    <message id="metadata.audio_tags_loaded">
+        <source>Read audio metadata.</source>
+        <translation>Read audio metadata.</translation>
+    </message>
     <message id="metadata.field.cover">
-        <source>cover</source>
-        <translation>cover</translation>
+        <source>Cover</source>
+        <translation>Cover</translation>
     </message>
     <message id="metadata.field.des">
         <source>des</source>
@@ -3793,10 +3821,6 @@ Error: %1</translation>
         <source>Import file</source>
         <translation>Import file</translation>
     </message>
-    <message id="track_metadata.import_pv">
-        <source>Import PV</source>
-        <translation>Import PV</translation>
-    </message>
     <message id="track_metadata.imported_background_image">
         <source>Cover imported to %1.</source>
         <translation>Cover imported to %1.</translation>
@@ -3830,16 +3854,12 @@ Error: %1</translation>
         <translation>Read Artist from MP3</translation>
     </message>
     <message id="track_metadata.read_from_audio">
-        <source>Read from audio file</source>
-        <translation>Read from audio file</translation>
+        <source>Read audio tags</source>
+        <translation>Read audio tags</translation>
     </message>
     <message id="track_metadata.read_title_from_mp3">
         <source>Read Title from MP3</source>
         <translation>Read Title from MP3</translation>
-    </message>
-    <message id="track_metadata.remove_pv">
-        <source>Remove PV</source>
-        <translation>Remove PV</translation>
     </message>
     <message id="track_metadata.the_selected_mp3_has_no">
         <source>The selected MP3 has no embedded cover artwork.</source>

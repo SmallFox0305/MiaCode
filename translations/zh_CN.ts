@@ -1913,6 +1913,10 @@ Restore the backup from %1?</source>
         <source>&amp;first must be a valid number of seconds.</source>
         <translation>&amp;first 必须是有效的秒数。</translation>
     </message>
+    <message id="document.manage_designer_names">
+        <source>Manage</source>
+        <translation>管理</translation>
+    </message>
     <message id="document.maidata_txt_already_exists_in">
         <source>maidata.txt already exists in the selected folder. Overwrite it?</source>
         <translation>所选文件夹下已存在 maidata.txt，是否覆盖？</translation>
@@ -2605,8 +2609,32 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <source>PV</source>
         <translation>PV</translation>
     </message>
+    <message id="metadata.import">
+        <source>Import</source>
+        <translation>导入</translation>
+    </message>
+    <message id="metadata.load_audio_info">
+        <source>Load audio info</source>
+        <translation>读取音频信息</translation>
+    </message>
+    <message id="metadata.remove">
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+    <message id="metadata.no_pv">
+        <source>No PV</source>
+        <translation>暂无PV</translation>
+    </message>
+    <message id="metadata.no_cover">
+        <source>No cover</source>
+        <translation>暂无曲绘</translation>
+    </message>
+    <message id="metadata.audio_tags_loaded">
+        <source>Read audio metadata.</source>
+        <translation>已读取音频信息。</translation>
+    </message>
     <message id="metadata.field.cover">
-        <source>cover</source>
+        <source>Cover</source>
         <translation>曲绘</translation>
     </message>
     <message id="metadata.field.des">
@@ -3793,10 +3821,6 @@ Error: %1</source>
         <source>Import file</source>
         <translation>导入文件</translation>
     </message>
-    <message id="track_metadata.import_pv">
-        <source>Import PV</source>
-        <translation>导入PV</translation>
-    </message>
     <message id="track_metadata.imported_background_image">
         <source>Cover imported to %1.</source>
         <translation>曲绘已导入到 %1。</translation>
@@ -3830,16 +3854,12 @@ Error: %1</source>
         <translation>从 MP3 读取曲师</translation>
     </message>
     <message id="track_metadata.read_from_audio">
-        <source>Read from audio file</source>
-        <translation>从音频文件读取</translation>
+        <source>Read audio tags</source>
+        <translation>读取音频标签</translation>
     </message>
     <message id="track_metadata.read_title_from_mp3">
         <source>Read Title from MP3</source>
         <translation>从 MP3 读取标题</translation>
-    </message>
-    <message id="track_metadata.remove_pv">
-        <source>Remove PV</source>
-        <translation>移除PV</translation>
     </message>
     <message id="track_metadata.the_selected_mp3_has_no">
         <source>The selected MP3 has no embedded cover artwork.</source>

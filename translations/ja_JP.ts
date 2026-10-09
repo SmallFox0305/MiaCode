@@ -1913,6 +1913,10 @@ Restore the backup from %1?</source>
         <source>&amp;first must be a valid number of seconds.</source>
         <translation>&amp;first には有効な秒数を指定してください。</translation>
     </message>
+    <message id="document.manage_designer_names">
+        <source>Manage</source>
+        <translation>管理</translation>
+    </message>
     <message id="document.maidata_txt_already_exists_in">
         <source>maidata.txt already exists in the selected folder. Overwrite it?</source>
         <translation>選択したフォルダーに既に maidata.txt があります。上書きしますか？</translation>
@@ -2605,9 +2609,33 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <source>PV</source>
         <translation>PV</translation>
     </message>
+    <message id="metadata.import">
+        <source>Import</source>
+        <translation>読み込む</translation>
+    </message>
+    <message id="metadata.load_audio_info">
+        <source>Load audio info</source>
+        <translation>音声情報を読み込む</translation>
+    </message>
+    <message id="metadata.remove">
+        <source>Remove</source>
+        <translation>削除</translation>
+    </message>
+    <message id="metadata.no_pv">
+        <source>No PV</source>
+        <translation>PVなし</translation>
+    </message>
+    <message id="metadata.no_cover">
+        <source>No cover</source>
+        <translation>ジャケットなし</translation>
+    </message>
+    <message id="metadata.audio_tags_loaded">
+        <source>Read audio metadata.</source>
+        <translation>音声情報を読み込みました。</translation>
+    </message>
     <message id="metadata.field.cover">
-        <source>cover</source>
-        <translation>Jacket</translation>
+        <source>Cover</source>
+        <translation>ジャケット</translation>
     </message>
     <message id="metadata.field.des">
         <source>des</source>
@@ -3793,10 +3821,6 @@ Error: %1</source>
         <source>Import file</source>
         <translation>ファイルを読み込む</translation>
     </message>
-    <message id="track_metadata.import_pv">
-        <source>Import PV</source>
-        <translation>PV を読み込む</translation>
-    </message>
     <message id="track_metadata.imported_background_image">
         <source>Cover imported to %1.</source>
         <translation>背景画像を %1 に読み込みました。</translation>
@@ -3830,16 +3854,12 @@ Error: %1</source>
         <translation>MP3 からアーティストを読み込む</translation>
     </message>
     <message id="track_metadata.read_from_audio">
-        <source>Read from audio file</source>
-        <translation>音声ファイルから読み込む</translation>
+        <source>Read audio tags</source>
+        <translation>音声タグを読み込む</translation>
     </message>
     <message id="track_metadata.read_title_from_mp3">
         <source>Read Title from MP3</source>
         <translation>MP3 からタイトルを読み込む</translation>
-    </message>
-    <message id="track_metadata.remove_pv">
-        <source>Remove PV</source>
-        <translation>PV を削除</translation>
     </message>
     <message id="track_metadata.the_selected_mp3_has_no">
         <source>The selected MP3 has no embedded cover artwork.</source>
