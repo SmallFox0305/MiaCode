@@ -92,7 +92,7 @@ Item {
         + (rangeModeButton.visible ? rangeModeButton.implicitWidth : 0)
         + rateButton.implicitWidth
         + (canvasMenuButton.visible ? canvasMenuButton.implicitWidth : 0)
-        + detachButton.implicitWidth
+        + (root.detached ? dockButton.implicitWidth : detachButton.implicitWidth)
         + transportRow.spacing * _visibleButtonCount
     readonly property real minimumWidth: _fixedChromeWidth + 16 + 40
     readonly property bool timeFitsFull: {
@@ -273,19 +273,24 @@ Item {
 
         IconButton {
             id: detachButton
+            objectName: "previewDetachButton"
+            visible: !root.detached
             Layout.preferredWidth: implicitWidth
             Layout.preferredHeight: implicitHeight
-            objectName: "previewDetachButton"
             iconSource: Qt.resolvedUrl("icons/preview-detach.svg")
-            active: root.detached
-            tooltip: root.detached ? qsTrId("preview.window.dock")
-                                   : qsTrId("preview.window.detach")
-            onClicked: {
-                if (root.detached)
-                    root.dockRequested()
-                else
-                    root.detachRequested()
-            }
+            tooltip: qsTrId("preview.window.detach")
+            onClicked: root.detachRequested()
+        }
+
+        IconButton {
+            id: dockButton
+            objectName: "previewDockButton"
+            visible: root.detached
+            Layout.preferredWidth: implicitWidth
+            Layout.preferredHeight: implicitHeight
+            iconSource: Qt.resolvedUrl("icons/preview-dock.svg")
+            tooltip: qsTrId("preview.window.dock")
+            onClicked: root.dockRequested()
         }
     }
 
