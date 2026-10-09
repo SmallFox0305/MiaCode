@@ -30,6 +30,7 @@ public:
 
     bool show(QQuickWindow* referenceWindow, int difficultyId);
     void raise();
+    void refreshDocument(int difficultyId);
     Q_INVOKABLE void close();
 
 private:
@@ -42,5 +43,7 @@ private:
     std::unique_ptr<QQmlApplicationEngine> engine_;
     QPointer<QQuickWindow> window_;
     bool closePending_ = false;
+    bool refreshPending_ = false;
+    int pendingDifficultyId_ = 0;
 };
 } // namespace miacode::ui

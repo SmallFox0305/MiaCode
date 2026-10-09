@@ -129,9 +129,18 @@ bool Bootstrap::start(const QString& startupOpenTarget)
     QObject::connect(static_cast<PageHost*>(applicationContext_->pages()),
         &PageHost::coverWindowRequested, this, &Bootstrap::openCoverExportWindow);
     auto* const document = static_cast<DocumentModel*>(applicationContext_->document());
-    QObject::connect(document, &DocumentModel::documentStateChanged, this, [this, document]() {
+    QObject::connect(document, &DocumentModel::documentStateChanged, this,
+        [this, document, chartPath = document->currentFilePath(),
+         generation = document->documentOpenGeneration()]() mutable {
+        const QString nextPath = document->currentFilePath();
+        const auto nextGeneration = document->documentOpenGeneration();
+        const bool changed = chartPath != nextPath || generation != nextGeneration;
+        chartPath = nextPath;
+        generation = nextGeneration;
         if (coverWindow_ && !document->hasDocument()) {
             coverWindow_->close();
+        } else if (coverWindow_ && changed) {
+            coverWindow_->refreshDocument(document->currentDifficultyId());
         }
     });
     QObject::connect(

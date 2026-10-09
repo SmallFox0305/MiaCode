@@ -9,6 +9,7 @@
 #include "app/services/PlaybackControl.h"
 #include "export/cover_export/CoverCompositionState.h"
 #include "app/services/CoverExportPreferences.h"
+#include "app/services/ProjectPreferences.h"
 #include "export/cover_export/CoverFramePlaybackController.h"
 #include "export/cover_export/CoverFrameExportPlan.h"
 #include "export/cover_export/CoverFrameSceneBinder.h"
@@ -234,6 +235,17 @@ void CoverExportSession::enter(int preferredDifficultyId)
     emit fontLibraryChanged();
 }
 
+void CoverExportSession::refreshDocument(int preferredDifficultyId)
+{
+    rebuildDifficultyList();
+    const int next = defaultDifficultyId(preferredDifficultyId);
+    if (selectedDifficultyId_ != next) {
+        selectedDifficultyId_ = next;
+        emit selectedDifficultyIdChanged();
+    }
+    seedFromDifficulty(next);
+}
+
 void CoverExportSession::leave()
 {
     if (!pageSessionActive_) {
@@ -301,14 +313,19 @@ void CoverExportSession::seedFromDifficulty(int difficultyId)
     commitActiveLayerFrameSeconds();
     stopAndDetachLiveChartScene();
     setBusy(true);
-    task_ = exportEngine_.buildSeedTask(difficultyId);
-    // Output file and canvas size are seeded once. Every later call re-seeds
-    // because the user picked a different DIFFICULTY, and the difficulty says
-    // nothing about where the image goes or how big it is — re-deriving them
-    // there silently discarded whatever the user had chosen. The saved
-    // composition, applied just below on the first seed, wins over both.
-    if (outputFile_.isEmpty()) {
-        outputFile_ = QString::fromLatin1(miacode::cover_export::CoverCompositionState::kDefaultOutputFile);
+    const VideoExportTask nextTask = exportEngine_.buildSeedTask(difficultyId);
+    const bool chartChanged = task_.chartPath != nextTask.chartPath;
+    if (chartChanged) flushComposition();
+    task_ = nextTask;
+    if (chartChanged || outputFile_.isEmpty()) {
+        const QJsonObject project = miacode::project_preferences::load(task_.chartPath);
+        outputFile_ = project.value(QStringLiteral("coverExport")).toObject()
+            .value(QStringLiteral("outputFile")).toString(
+                QString::fromLatin1(miacode::cover_export::CoverCompositionState::kDefaultOutputFile));
+        if (outputFile_.trimmed().isEmpty()) {
+            outputFile_ = QString::fromLatin1(miacode::cover_export::CoverCompositionState::kDefaultOutputFile);
+        }
+        outputDirty_ = false;
     }
     if (!hasLoadedPreferences_) {
         for (int index = 0; index < std::size(kCoverResolutionPresets); ++index) {
@@ -324,7 +341,9 @@ void CoverExportSession::seedFromDifficulty(int difficultyId)
     chartFrameDuration_ = chartFrameAvailable_ ? frameRenderer_->contentDurationSeconds() : 0.0;
 
     if (!hasLoadedPreferences_) {
-        const QJsonObject saved = miacode::app_preferences::coverExportPreferences().loadPreferences();
+        QJsonObject saved = miacode::app_preferences::coverExportPreferences().loadPreferences();
+        saved.remove(QStringLiteral("outputFile"));
+        saved.remove(QStringLiteral("output"));
         if (!saved.isEmpty()) {
             applyCompositionJson(saved, false);
         }
@@ -969,7 +988,10 @@ void CoverExportSession::setOutputFile(const QString& path)
     if (input.endsWith(QLatin1Char('/')) || input.endsWith(QLatin1Char('\\'))) return;
     const QString next = QDir::cleanPath(input);
     if (outputFile_ == next) return;
-    outputFile_ = next; emit outputChanged(); persistComposition();
+    outputFile_ = next;
+    outputDirty_ = true;
+    emit outputChanged();
+    compositionSaveTimer_.start();
 }
 
 QString CoverExportSession::outputFilePath() const
@@ -1044,9 +1066,7 @@ QJsonObject CoverExportSession::compositionJson() const
 QJsonObject CoverExportSession::sharedCompositionJson() const
 {
     QJsonObject root = compositionJson();
-    // A saved .miacover travels to other charts and other machines. The output
-    // file is a property of this installation, not of the look being shared,
-    // so it stays in the local preferences blob and out of the file.
+    // Output destinations belong to the chart project; shared layouts keep appearance only.
     root.remove(QStringLiteral("outputFile"));
     return root;
 }
@@ -1155,7 +1175,10 @@ bool CoverExportSession::applyCompositionJsonInternal(const QJsonObject& root,
     // Presets and older layouts carry no output file; keep the current one
     // rather than blanking the field.
     if (const QString savedOutput = state.outputFile.trimmed(); !savedOutput.isEmpty()) {
-        outputFile_ = savedOutput;
+        if (outputFile_ != savedOutput) {
+            outputFile_ = savedOutput;
+            outputDirty_ = true;
+        }
     }
     if (layout_ != nullptr) {
         layout_->fromJson(state.layout);
@@ -1247,11 +1270,16 @@ void CoverExportSession::persistComposition()
 void CoverExportSession::flushComposition()
 {
     compositionSaveTimer_.stop();
-    if (!compositionDirty_) return;
-    // Build from live session state at flush time. The adapter merges into the
-    // latest section so an intervening preset/recent-file edit survives.
-    if (miacode::app_preferences::coverExportPreferences().savePreferences(compositionJson())) {
+    if (compositionDirty_
+        && miacode::app_preferences::coverExportPreferences().savePreferences(sharedCompositionJson())) {
         compositionDirty_ = false;
+    }
+    if (outputDirty_ && !task_.chartPath.isEmpty()) {
+        QJsonObject project = miacode::project_preferences::load(task_.chartPath);
+        QJsonObject cover = project.value(QStringLiteral("coverExport")).toObject();
+        cover.insert(QStringLiteral("outputFile"), outputFile_);
+        project.insert(QStringLiteral("coverExport"), cover);
+        if (miacode::project_preferences::save(task_.chartPath, project)) outputDirty_ = false;
     }
 }
 

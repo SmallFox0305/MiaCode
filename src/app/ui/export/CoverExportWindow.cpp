@@ -31,8 +31,12 @@ CoverExportWindow::CoverExportWindow(miacode::ExportEngine& exportEngine,
     // Export pumps events while capturing. Finish the active operation before
     // deleting its session, including when the application is closing.
     connect(&session_, &CoverExportSession::busyChanged, this, [this] {
-        if (closePending_ && !session_.busy()) {
+        if (session_.busy()) return;
+        if (closePending_) {
             close();
+        } else if (refreshPending_) {
+            refreshPending_ = false;
+            session_.refreshDocument(pendingDifficultyId_);
         }
     }, Qt::QueuedConnection);
     windowChrome_.setBlurMaterialsEnabled(preferences_.blurMaterialsEnabled());
@@ -105,6 +109,14 @@ void CoverExportWindow::raise()
         window_->raise();
         window_->requestActivate();
     }
+}
+
+void CoverExportWindow::refreshDocument(int difficultyId)
+{
+    if (closePending_) return;
+    pendingDifficultyId_ = difficultyId;
+    refreshPending_ = session_.busy();
+    if (!refreshPending_) session_.refreshDocument(difficultyId);
 }
 
 void CoverExportWindow::close()

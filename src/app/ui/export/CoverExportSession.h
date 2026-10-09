@@ -129,6 +129,7 @@ public:
     bool busy() const { return busy_; }
 
     void enter(int preferredDifficultyId);
+    void refreshDocument(int preferredDifficultyId);
     void leave();
 
     Q_INVOKABLE void selectDifficulty(int difficultyId);
@@ -276,6 +277,7 @@ private:
     bool hasLoadedPreferences_ = false;
     QTimer compositionSaveTimer_;
     bool compositionDirty_ = false;
+    bool outputDirty_ = false;
     bool blurBackground_ = true;
     bool cardShadow_ = false;
     bool levelTextRender_ = false;

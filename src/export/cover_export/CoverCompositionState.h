@@ -17,12 +17,9 @@ struct CoverCompositionState {
     QJsonObject background;
     QJsonObject card;
     QJsonObject layout;
-    // The file the rendered cover is written to: a bare name ("card.jpg"), a
-    // path relative to the chart folder, or an absolute path. Remembered like
-    // the rest of the composition so switching difficulty (which re-seeds size
-    // and card inputs from the chart) cannot silently drop what the user typed.
-    // Empty means "not chosen yet" and writes no key — presets stay
-    // machine-agnostic.
+    // Output destination retained in session snapshots and legacy compositions.
+    // CoverExportSession persists it per chart project; shared layouts and
+    // application preferences omit it. Relative paths use the chart folder.
     QString outputFile;
 
     QJsonObject toJson() const;
