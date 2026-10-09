@@ -540,7 +540,7 @@ Item {
         function onActiveEditorKeyChanged() {
             if (state.latencyEditorActive && root.pages.activePageId !== "latency")
                 root.pages.openLatencyPage()
-            else if (state.metadataEditorActive && root.pages.activePageId === "latency")
+            else if (state.metadataEditorActive && !root.pages.overlayActive)
                 root.pages.activateMetadataPage()
         }
 

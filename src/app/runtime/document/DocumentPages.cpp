@@ -390,7 +390,7 @@ bool miacode::runtime::DocumentSessionHost::switchToDifficultyField(int difficul
     state_.currentFieldDirty_ = false;
     updateDirtyState();
     QTimer::singleShot(0, &session_, [this, difficultyId]() {
-        if (state_.activeDifficultyId_ != difficultyId || !session_.hasActiveDifficulty()) {
+        if (state_.activeDifficultyId_ != difficultyId || !difficultyPageActive()) {
             return;
         }
         session_.restoreBottomTabsCurrentTabAfterRefresh(Session::BottomTabsTabId::Timeline);
