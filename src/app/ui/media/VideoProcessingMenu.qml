@@ -10,7 +10,7 @@ AppMenu {
     title: qsTrId("media_tools.video_processing_pv")
 
     AppMenuAction {
-        text: qsTrId("media_tools.prepend_blank")
+        text: qsTrId("media_tools.prepend_pv_black_screen")
         enabled: root.documentAvailable
         onTriggered: root.toolRequested("prependPv")
     }

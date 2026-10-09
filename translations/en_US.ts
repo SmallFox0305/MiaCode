@@ -2190,8 +2190,8 @@ Restore the backup from %1?</translation>
         <translation>Audio/Video Processing</translation>
     </message>
     <message id="media_tools.align_pv_to_audio">
-        <source>Align PV to Track Audio</source>
-        <translation>Align PV to Track Audio</translation>
+        <source>Auto-align Video to Track Audio</source>
+        <translation>Auto-align Video to Track Audio</translation>
     </message>
     <message id="media_tools.background_mp4_video">
         <source>background .mp4 video</source>
@@ -2294,8 +2294,8 @@ Restore the backup from %1?</translation>
         <translation>Compressed, but replacement failed; output kept at %1</translation>
     </message>
     <message id="media_tools.batch_compress">
-        <source>Batch Compress</source>
-        <translation>Batch Compress</translation>
+        <source>Batch Compress Videos</source>
+        <translation>Batch Compress Videos</translation>
     </message>
     <message id="media_tools.batch_pv_start">
         <source>Compress Videos</source>
@@ -2458,8 +2458,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>Prepend Blank</translation>
     </message>
     <message id="media_tools.prepend_pv_black_screen">
-        <source>Prepend PV Black Screen</source>
-        <translation>Prepend PV Black Screen</translation>
+        <source>Add Intro Black Screen</source>
+        <translation>Add Intro Black Screen</translation>
     </message>
     <message id="media_tools.analyzing_audio_alignment">
         <source>Analyzing audio alignment...</source>
@@ -2510,8 +2510,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>progress surface unavailable</translation>
     </message>
     <message id="media_tools.pv_compress">
-        <source>PV Compression</source>
-        <translation>PV Compression</translation>
+        <source>Compress Current Video</source>
+        <translation>Compress Current Video</translation>
     </message>
     <message id="media_tools.replace_failed">
         <source>Failed to replace file: %1</source>

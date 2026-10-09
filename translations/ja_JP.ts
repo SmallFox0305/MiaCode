@@ -2190,8 +2190,8 @@ Restore the backup from %1?</source>
         <translation>オーディオ/動画処理</translation>
     </message>
     <message id="media_tools.align_pv_to_audio">
-        <source>Align PV to Track Audio</source>
-        <translation>PVを音声に合わせる</translation>
+        <source>Auto-align Video to Track Audio</source>
+        <translation>動画を楽曲音声に自動同期</translation>
     </message>
     <message id="media_tools.background_mp4_video">
         <source>background .mp4 video</source>
@@ -2294,8 +2294,8 @@ Restore the backup from %1?</source>
         <translation>Compressed, but replacement failed; output kept at %1</translation>
     </message>
     <message id="media_tools.batch_compress">
-        <source>Batch Compress</source>
-        <translation>一括圧縮</translation>
+        <source>Batch Compress Videos</source>
+        <translation>動画を一括圧縮</translation>
     </message>
     <message id="media_tools.batch_pv_start">
         <source>Compress Videos</source>
@@ -2458,8 +2458,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>先頭に空白を追加</translation>
     </message>
     <message id="media_tools.prepend_pv_black_screen">
-        <source>Prepend PV Black Screen</source>
-        <translation>動画の先頭に黒画面を追加</translation>
+        <source>Add Intro Black Screen</source>
+        <translation>冒頭に黒画面を追加</translation>
     </message>
     <message id="media_tools.analyzing_audio_alignment">
         <source>Analyzing audio alignment...</source>
@@ -2510,8 +2510,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>進捗画面を利用できません</translation>
     </message>
     <message id="media_tools.pv_compress">
-        <source>PV Compression</source>
-        <translation>PV圧縮</translation>
+        <source>Compress Current Video</source>
+        <translation>現在の動画を圧縮</translation>
     </message>
     <message id="media_tools.replace_failed">
         <source>Failed to replace file: %1</source>

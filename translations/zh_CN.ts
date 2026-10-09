@@ -2190,8 +2190,8 @@ Restore the backup from %1?</source>
         <translation>音频/视频处理</translation>
     </message>
     <message id="media_tools.align_pv_to_audio">
-        <source>Align PV to Track Audio</source>
-        <translation>视频对齐音频</translation>
+        <source>Auto-align Video to Track Audio</source>
+        <translation>自动对齐曲目音频</translation>
     </message>
     <message id="media_tools.background_mp4_video">
         <source>background .mp4 video</source>
@@ -2294,8 +2294,8 @@ Restore the backup from %1?</source>
         <translation>压缩完成但替换失败，输出保留在 %1</translation>
     </message>
     <message id="media_tools.batch_compress">
-        <source>Batch Compress</source>
-        <translation>批量压缩</translation>
+        <source>Batch Compress Videos</source>
+        <translation>批量压缩视频</translation>
     </message>
     <message id="media_tools.batch_pv_start">
         <source>Compress Videos</source>
@@ -2458,8 +2458,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>前置空白</translation>
     </message>
     <message id="media_tools.prepend_pv_black_screen">
-        <source>Prepend PV Black Screen</source>
-        <translation>视频前置黑幕</translation>
+        <source>Add Intro Black Screen</source>
+        <translation>添加片头黑幕</translation>
     </message>
     <message id="media_tools.analyzing_audio_alignment">
         <source>Analyzing audio alignment...</source>
@@ -2510,8 +2510,8 @@ The file may be open in preview, a media player, File Explorer preview pane, or 
         <translation>进度界面不可用</translation>
     </message>
     <message id="media_tools.pv_compress">
-        <source>PV Compression</source>
-        <translation>PV 压缩</translation>
+        <source>Compress Current Video</source>
+        <translation>压缩当前视频</translation>
     </message>
     <message id="media_tools.replace_failed">
         <source>Failed to replace file: %1</source>
