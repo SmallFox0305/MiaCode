@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import QtQuick.Layouts
 import MiaCode.UI
 
@@ -484,18 +485,39 @@ Item {
                         Layout.preferredWidth: coverColumn.side
                         Layout.preferredHeight: coverColumn.side
                         radius: Theme.controlRadius
-                        color: Theme.overlayColor(Theme.colors.background.control)
-                        clip: true
+                        color: metadataCover.status === Image.Ready ? "transparent"
+                            : Theme.overlayColor(Theme.colors.background.control)
 
                         Image {
                             id: metadataCover
                             anchors.fill: parent
-                            anchors.margins: Theme.chromePadding
                             source: root.documentSession.metadataCoverSource
                             sourceSize.width: 320
                             sourceSize.height: 320
                             fillMode: Image.PreserveAspectFit
                             cache: false
+                            layer.enabled: status === Image.Ready
+                            layer.effect: MultiEffect {
+                                autoPaddingEnabled: false
+                                maskEnabled: true
+                                maskSource: coverMask
+                            }
+
+                            Item {
+                                id: coverMask
+                                width: metadataCover.width
+                                height: metadataCover.height
+                                visible: false
+                                layer.enabled: true
+
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: metadataCover.paintedWidth
+                                    height: metadataCover.paintedHeight
+                                    radius: Theme.controlRadius
+                                    color: "white"
+                                }
+                            }
                         }
                         Text {
                             anchors.fill: parent
